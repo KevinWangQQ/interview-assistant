@@ -41,7 +41,7 @@ export class WhisperAudioService implements IAudioService {
       // 创建MediaRecorder
       const mimeType = this.getSupportedMimeType();
       const mediaRecorderOptions: MediaRecorderOptions = {
-        audioBitsPerSecond: 128000
+        audioBitsPerSecond: 64000  // 降低比特率提高兼容性
       };
       
       // 只有在有有效mimeType时才添加
@@ -151,14 +151,39 @@ export class WhisperAudioService implements IAudioService {
       const apiKey = this.getApiKey();
       console.log(`[${transcribeId}] API密钥状态:`, apiKey ? `有效 (前6位: ${apiKey.substring(0, 6)}...)` : '未找到');
       
-      // 将音频转换为WAV格式（Whisper API要求）
-      console.log(`[${transcribeId}] 开始转换音频格式为WAV...`);
-      const wavBlob = await this.convertToWav(audioBlob);
-      console.log(`[${transcribeId}] WAV转换完成，大小:`, wavBlob.size, '类型:', wavBlob.type);
+      // 直接使用原始音频格式，让Whisper API处理格式转换
+      console.log(`[${transcribeId}] 直接使用原始音频格式:`, audioBlob.type);
+      
+      // 根据音频类型确定文件扩展名
+      let fileName = `audio_${transcribeId}`;
+      let audioToSend = audioBlob;
+      
+      if (audioBlob.type.includes('webm')) {
+        fileName += '.webm';
+      } else if (audioBlob.type.includes('mp4')) {
+        fileName += '.mp4';  
+      } else if (audioBlob.type.includes('wav')) {
+        fileName += '.wav';
+      } else if (audioBlob.type.includes('ogg')) {
+        fileName += '.ogg';
+      } else {
+        // 如果类型不明确，尝试WAV转换作为回退
+        console.log(`[${transcribeId}] 未知音频类型，尝试WAV转换...`);
+        try {
+          audioToSend = await this.convertToWav(audioBlob);
+          fileName += '.wav';
+          console.log(`[${transcribeId}] WAV转换成功，大小:`, audioToSend.size);
+        } catch (error) {
+          console.warn(`[${transcribeId}] WAV转换失败，使用原始格式:`, error);
+          fileName += '.webm'; // 默认扩展名
+        }
+      }
+      
+      console.log(`[${transcribeId}] 发送音频文件:`, fileName, '大小:', audioToSend.size);
       
       // 调用Whisper API
       const formData = new FormData();
-      formData.append('file', wavBlob, `audio_${transcribeId}.wav`);
+      formData.append('file', audioToSend, fileName);
       formData.append('model', options?.model || 'whisper-1');
       
       if (options?.language) {
@@ -282,27 +307,26 @@ export class WhisperAudioService implements IAudioService {
 
   // 私有方法
   private getSupportedMimeType(): string {
-    // 优先选择Whisper API支持的格式
+    // 简化格式选择，优先选择最兼容的格式
     const types = [
-      'audio/wav',           // 首选WAV
-      'audio/mp3',           // MP3
-      'audio/mp4',           // MP4
-      'audio/mpeg',          // MPEG
-      'audio/webm;codecs=opus', // WebM with Opus
-      'audio/webm',          // WebM
-      'audio/ogg;codecs=opus', // OGG with Opus  
-      'audio/ogg',           // OGG
+      'audio/webm;codecs=opus', // 大多数现代浏览器支持
+      'audio/webm',             // 基本WebM
+      'audio/mp4',              // MP4格式
+      'audio/ogg;codecs=opus',  // OGG格式
     ];
 
+    console.log('检查支持的音频格式:');
     for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
+      const isSupported = MediaRecorder.isTypeSupported(type);
+      console.log(`  ${type}: ${isSupported ? '✅' : '❌'}`);
+      if (isSupported) {
         console.log('选择音频格式:', type);
         return type;
       }
     }
 
-    // 如果都不支持，使用默认格式
-    console.warn('没有找到理想的音频格式，使用浏览器默认格式');
+    // 如果都不支持，让浏览器选择默认格式
+    console.warn('使用浏览器默认音频格式');
     return '';
   }
 

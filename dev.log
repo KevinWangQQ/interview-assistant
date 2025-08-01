@@ -33,3 +33,10 @@
  ✓ Compiled in 48ms
  ✓ Compiled in 45ms
  ✓ Compiled in 42ms
+ GET / 200 in 224ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 275ms
+ ✓ Compiled in 83ms
+ ✓ Compiled in 55ms
+ ✓ Compiled in 44ms
+ ✓ Compiled in 38ms
+ ✓ Compiled in 64ms

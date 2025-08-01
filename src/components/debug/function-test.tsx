@@ -17,6 +17,7 @@ import {
 import { useInterviewStore } from '@/store/interview-store';
 import { useAudioProcessor } from '@/hooks/use-audio-processor';
 import { getAudioService, getTranslationService, getStorageService } from '@/services';
+import { SimpleAudioTest } from './simple-audio-test';
 
 interface TestResult {
   name: string;
@@ -331,6 +332,9 @@ export function FunctionTest() {
           </CardContent>
         </Card>
       )}
+
+      {/* 简单音频测试 */}
+      <SimpleAudioTest />
 
       {/* API配置提醒 */}
       {!config.openaiApiKey && !process.env.NEXT_PUBLIC_OPENAI_API_KEY && (
