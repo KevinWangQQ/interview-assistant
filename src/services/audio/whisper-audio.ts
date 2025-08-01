@@ -158,52 +158,17 @@ export class WhisperAudioService implements IAudioService {
       let fileName = `audio_${transcribeId}`;
       let audioToSend = audioBlob;
       
-      // 根据MIME类型确定扩展名和标准化格式
-      if (audioBlob.type.includes('wav')) {
-        fileName += '.wav';
-        audioToSend = new Blob([audioBlob], { type: 'audio/wav' });
-      } else if (audioBlob.type.includes('mp4')) {
-        fileName += '.mp4';
-        audioToSend = new Blob([audioBlob], { type: 'audio/mp4' });
-      } else if (audioBlob.type.includes('mp3') || audioBlob.type.includes('mpeg')) {
-        fileName += '.mp3';
-        audioToSend = new Blob([audioBlob], { type: 'audio/mpeg' });
-      } else if (audioBlob.type.includes('ogg')) {
-        fileName += '.ogg';
-        audioToSend = new Blob([audioBlob], { type: 'audio/ogg' });
-      } else if (audioBlob.type.includes('webm')) {
-        fileName += '.webm';
-        audioToSend = new Blob([audioBlob], { type: 'audio/webm' });
-        console.log(`[${transcribeId}] WebM格式标准化，新MIME类型:`, audioToSend.type);
-      } else {
-        // 对于未知类型，使用webm格式（通常是浏览器默认）
-        console.log(`[${transcribeId}] 未知音频类型 (${audioBlob.type})，标准化为webm`);
-        fileName += '.webm';
-        audioToSend = new Blob([audioBlob], { type: 'audio/webm' });
-      }
+      // 使用与简单测试组件完全相同的方法 - 直接使用原始音频
+      console.log(`[${transcribeId}] 使用简单测试成功的方法：直接发送原始音频`);
+      audioToSend = audioBlob; // 直接使用原始音频，不做任何转换
+      fileName += '.webm'; // 使用与简单测试相同的扩展名
       
       // 验证音频数据
       if (!audioToSend || audioToSend.size === 0) {
         throw new Error('音频数据为空');
       }
       
-      console.log(`[${transcribeId}] 发送音频文件:`, fileName, '大小:', audioToSend.size, '类型:', audioToSend.type);
-      
-      // 详细调试FormData内容
-      console.log(`[${transcribeId}] FormData详情:`);
-      console.log('  - 文件名:', fileName);
-      console.log('  - MIME类型:', audioToSend.type);
-      console.log('  - 文件大小:', audioToSend.size);
-      
-      // 检查音频数据的前几个字节来验证格式
-      const arrayBuffer = await audioToSend.slice(0, 16).arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
-      console.log(`[${transcribeId}] 音频数据头部 (前16字节):`, hex);
-      
-      // 检查是否是有效的音频格式标识
-      const header = new TextDecoder('ascii', { fatal: false }).decode(bytes.slice(0, 4));
-      console.log(`[${transcribeId}] 文件头部标识:`, header);
+      console.log(`[${transcribeId}] 发送到Whisper API:`, audioToSend.type, audioToSend.size);
       
       // 调用Whisper API
       const formData = new FormData();
@@ -241,60 +206,12 @@ export class WhisperAudioService implements IAudioService {
       });
 
       clearTimeout(timeoutId);
-      console.log(`[${transcribeId}] Whisper API响应状态:`, response.status, response.statusText);
+      console.log(`[${transcribeId}] Whisper API响应:`, response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`[${transcribeId}] Whisper API错误响应:`, errorText);
-        
-        // 如果是格式错误且是WebM，尝试WAV转换作为最后回退
-        if (response.status === 400 && errorText.includes('Invalid file format') && fileName.includes('.webm')) {
-          console.warn(`[${transcribeId}] WebM格式被拒绝，尝试WAV转换作为回退...`);
-          try {
-            const wavBlob = await this.convertToWav(audioBlob);
-            const wavFormData = new FormData();
-            wavFormData.append('file', wavBlob, `audio_${transcribeId}_fallback.wav`);
-            wavFormData.append('model', options?.model || 'whisper-1');
-            
-            if (options?.language) {
-              wavFormData.append('language', options.language);
-            }
-            
-            console.log(`[${transcribeId}] 发送WAV回退，大小:`, wavBlob.size);
-            
-            const wavResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${apiKey}`,
-              },
-              body: wavFormData,
-              signal: controller.signal
-            });
-            
-            if (wavResponse.ok) {
-              const wavResult = await wavResponse.json();
-              console.log(`[${transcribeId}] WAV回退转录成功:`, wavResult);
-              return {
-                text: wavResult.text || '',
-                confidence: 0.9,
-                segments: wavResult.segments || undefined
-              };
-            }
-          } catch (wavError) {
-            console.error(`[${transcribeId}] WAV回退也失败:`, wavError);
-          }
-        }
-        
-        // 针对不同错误码的处理
-        if (response.status === 429) {
-          throw new Error(`API调用频率限制，请稍后重试`);
-        } else if (response.status === 400) {
-          throw new Error(`音频格式或参数错误: ${errorText}`);
-        } else if (response.status === 401) {
-          throw new Error(`API密钥无效，请检查设置`);
-        } else {
-          throw new Error(`Whisper API error: ${response.status} ${response.statusText} - ${errorText}`);
-        }
+        console.error(`[${transcribeId}] API错误:`, errorText);
+        throw new Error(`API错误 (${response.status}): ${errorText}`);
       }
 
       const result = await response.json();
