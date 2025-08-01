@@ -126,8 +126,16 @@ export class WhisperAudioService implements IAudioService {
 
   async transcribe(audioBlob: Blob, options?: TranscriptionOptions): Promise<TranscriptionResult> {
     try {
+      console.log('开始转录音频，原始音频大小:', audioBlob.size, '类型:', audioBlob.type);
+      
+      // 检查API密钥
+      const apiKey = this.getApiKey();
+      console.log('API密钥状态:', apiKey ? `有效 (前6位: ${apiKey.substring(0, 6)}...)` : '未找到');
+      
       // 将音频转换为WAV格式（Whisper API要求）
+      console.log('开始转换音频格式为WAV...');
       const wavBlob = await this.convertToWav(audioBlob);
+      console.log('WAV转换完成，大小:', wavBlob.size, '类型:', wavBlob.type);
       
       // 调用Whisper API
       const formData = new FormData();
@@ -136,29 +144,38 @@ export class WhisperAudioService implements IAudioService {
       
       if (options?.language) {
         formData.append('language', options.language);
+        console.log('设置语言:', options.language);
       }
       
       if (options?.prompt) {
         formData.append('prompt', options.prompt);
+        console.log('设置提示词:', options.prompt);
       }
 
       if (options?.temperature !== undefined) {
         formData.append('temperature', options.temperature.toString());
+        console.log('设置温度:', options.temperature);
       }
 
+      console.log('发送Whisper API请求...');
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.getApiKey()}`,
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: formData,
       });
 
+      console.log('Whisper API响应状态:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`Whisper API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('Whisper API错误响应:', errorText);
+        throw new Error(`Whisper API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('转录结果:', result);
       
       return {
         text: result.text || '',
@@ -166,6 +183,7 @@ export class WhisperAudioService implements IAudioService {
         segments: result.segments || undefined
       };
     } catch (error) {
+      console.error('转录详细错误:', error);
       throw new Error(`Transcription failed: ${error}`);
     }
   }
@@ -240,15 +258,27 @@ export class WhisperAudioService implements IAudioService {
     // 简单的WAV转换实现
     // 在生产环境中，建议使用专业的音频处理库
     try {
+      console.log('开始WAV转换，原始格式:', audioBlob.type, '大小:', audioBlob.size);
+      
       const arrayBuffer = await audioBlob.arrayBuffer();
+      console.log('ArrayBuffer大小:', arrayBuffer.byteLength);
+      
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      console.log('音频上下文创建成功，采样率:', audioContext.sampleRate);
+      
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      console.log('音频解码成功 - 时长:', audioBuffer.duration, '采样率:', audioBuffer.sampleRate, '声道数:', audioBuffer.numberOfChannels);
       
       const wavBuffer = this.audioBufferToWav(audioBuffer);
+      console.log('WAV编码完成，大小:', wavBuffer.byteLength);
+      
       return new Blob([wavBuffer], { type: 'audio/wav' });
     } catch (error) {
       // 如果转换失败，返回原始Blob
-      console.warn('WAV conversion failed, using original audio:', error);
+      console.warn('WAV转换失败，使用原始音频:', error);
+      console.log('原始音频信息 - 类型:', audioBlob.type, '大小:', audioBlob.size);
+      
+      // 如果原始格式不是WAV，尝试直接返回（可能Whisper能处理）
       return audioBlob;
     }
   }
@@ -296,12 +326,45 @@ export class WhisperAudioService implements IAudioService {
 
   private getApiKey(): string {
     // 从环境变量或配置中获取API密钥
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || 
-                   (typeof window !== 'undefined' ? localStorage.getItem('openai_api_key') : null);
-    if (!apiKey) {
-      throw new Error('OpenAI API key not found. Please set NEXT_PUBLIC_OPENAI_API_KEY or save it in localStorage.');
+    let apiKey: string | null = null;
+    
+    // 优先从环境变量获取
+    if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_OPENAI_API_KEY) {
+      apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+      console.log('从环境变量获取API密钥');
     }
-    return apiKey;
+    
+    // 其次从localStorage获取
+    if (!apiKey && typeof window !== 'undefined') {
+      apiKey = localStorage.getItem('openai_api_key');
+      if (apiKey) {
+        console.log('从localStorage获取API密钥');
+      }
+    }
+    
+    // 最后从应用配置获取
+    if (!apiKey && typeof window !== 'undefined') {
+      const configStr = localStorage.getItem('interview-assistant-config');
+      if (configStr) {
+        try {
+          const config = JSON.parse(configStr);
+          apiKey = config.openaiApiKey;
+          if (apiKey) {
+            console.log('从应用配置获取API密钥');
+          }
+        } catch (e) {
+          console.warn('解析应用配置失败:', e);
+        }
+      }
+    }
+    
+    if (!apiKey || apiKey.trim() === '') {
+      const errorMsg = 'OpenAI API key not found. Please set it in Settings page or save it in localStorage as "openai_api_key".';
+      console.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    return apiKey.trim();
   }
 
   private cleanup(): void {

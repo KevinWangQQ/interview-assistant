@@ -295,14 +295,37 @@ ${text}`;
   }
 
   private getApiKey(): string {
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || 
-                   (typeof window !== 'undefined' ? localStorage.getItem('openai_api_key') : null);
+    // 从环境变量或配置中获取API密钥
+    let apiKey: string | null = null;
     
-    if (!apiKey) {
-      throw new Error('OpenAI API key not found. Please set NEXT_PUBLIC_OPENAI_API_KEY or save it in localStorage.');
+    // 优先从环境变量获取
+    if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_OPENAI_API_KEY) {
+      apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
     }
     
-    return apiKey;
+    // 其次从localStorage获取
+    if (!apiKey && typeof window !== 'undefined') {
+      apiKey = localStorage.getItem('openai_api_key');
+    }
+    
+    // 最后从应用配置获取
+    if (!apiKey && typeof window !== 'undefined') {
+      const configStr = localStorage.getItem('interview-assistant-config');
+      if (configStr) {
+        try {
+          const config = JSON.parse(configStr);
+          apiKey = config.openaiApiKey;
+        } catch (e) {
+          console.warn('解析应用配置失败:', e);
+        }
+      }
+    }
+    
+    if (!apiKey || apiKey.trim() === '') {
+      throw new Error('OpenAI API key not found. Please set it in Settings page or save it in localStorage as "openai_api_key".');
+    }
+    
+    return apiKey.trim();
   }
 
   // 重置使用统计

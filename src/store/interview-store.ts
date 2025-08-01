@@ -300,15 +300,22 @@ export const useInterviewStore = create<InterviewStore>()(
       // 音频处理
       processAudioChunk: async (audioBlob: Blob) => {
         try {
+          console.log('开始处理音频块，大小:', audioBlob.size, '类型:', audioBlob.type);
           set({ isProcessingAudio: true });
           
           const audioService = getAudioService();
           const translationService = getTranslationService();
           
+          console.log('音频服务实例:', audioService.constructor.name);
+          console.log('翻译服务实例:', translationService.constructor.name);
+          
           // 转录音频
+          console.log('开始调用音频转录...');
           const transcriptionResult = await audioService.transcribe(audioBlob);
+          console.log('转录完成，结果:', transcriptionResult);
           
           if (!transcriptionResult.text.trim()) {
+            console.log('转录结果为空，跳过处理');
             set({ isProcessingAudio: false });
             return;
           }
@@ -324,16 +331,19 @@ export const useInterviewStore = create<InterviewStore>()(
             isProcessing: true
           };
 
+          console.log('添加新转录段:', segment);
           get().addSegment(segment);
 
           // 自动翻译
           if (get().config.autoTranslate) {
+            console.log('开始自动翻译...');
             const { source, target } = get().config.language;
             const translationResult = await translationService.translate(
               segment.originalText, 
               source, 
               target
             );
+            console.log('翻译完成:', translationResult);
 
             // 更新翻译结果
             set(state => ({
@@ -356,11 +366,15 @@ export const useInterviewStore = create<InterviewStore>()(
 
           // 自动生成问题建议
           if (get().config.autoSuggestQuestions) {
+            console.log('加载问题建议...');
             await get().loadQuestionSuggestions();
           }
 
+          console.log('音频处理完成');
           set({ isProcessingAudio: false });
         } catch (error) {
+          console.error('音频处理详细错误信息:', error);
+          console.error('错误堆栈:', error instanceof Error ? error.stack : 'No stack trace');
           set({ isProcessingAudio: false });
           get().setError({
             code: 'PROCESS_AUDIO_FAILED',
