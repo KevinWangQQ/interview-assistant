@@ -8,6 +8,8 @@ import { WhisperAudioService } from '@/services/audio/whisper-audio';
 export function useAudioProcessor() {
   const audioChunksRef = useRef<Blob[]>([]);
   const isProcessingRef = useRef<boolean>(false);
+  const processingQueueRef = useRef<Blob[]>([]);
+  const lastProcessTimeRef = useRef<number>(0);
   
   const { 
     isRecording, 
@@ -19,18 +21,45 @@ export function useAudioProcessor() {
 
   // 处理单个音频块
   const handleAudioData = useCallback(async (audioBlob: Blob) => {
-    if (isProcessingRef.current || !audioBlob || audioBlob.size === 0) {
+    const now = Date.now();
+    
+    // 频率控制：至少间隔2秒处理一次
+    if (now - lastProcessTimeRef.current < 2000) {
+      console.log('处理频率过快，跳过此次音频块');
+      return;
+    }
+    
+    if (isProcessingRef.current) {
+      console.log('正在处理中，将音频块加入队列');
+      processingQueueRef.current.push(audioBlob);
+      return;
+    }
+
+    if (!audioBlob || audioBlob.size === 0) {
       return;
     }
 
     try {
       isProcessingRef.current = true;
+      lastProcessTimeRef.current = now;
       
-      console.log('收到音频数据，大小:', audioBlob.size);
+      console.log('收到音频数据，大小:', audioBlob.size, '时间:', new Date().toLocaleTimeString());
       
       // 只处理足够大的音频块
       if (audioBlob.size > 1000) { // 1KB最小阈值
         await processAudioChunk(audioBlob);
+        
+        // 处理完成后，检查队列中是否有待处理的音频
+        if (processingQueueRef.current.length > 0) {
+          console.log(`队列中还有 ${processingQueueRef.current.length} 个音频块待处理`);
+          // 只处理最新的音频块，丢弃旧的
+          const latestAudio = processingQueueRef.current.pop();
+          processingQueueRef.current = []; // 清空队列
+          
+          if (latestAudio && latestAudio.size > 1000) {
+            setTimeout(() => handleAudioData(latestAudio), 1000); // 1秒后处理
+          }
+        }
       }
     } catch (error) {
       console.error('音频处理失败:', error);

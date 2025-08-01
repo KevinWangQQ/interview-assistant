@@ -40,10 +40,17 @@ export class WhisperAudioService implements IAudioService {
       
       // 创建MediaRecorder
       const mimeType = this.getSupportedMimeType();
-      this.mediaRecorder = new MediaRecorder(this.audioStream, {
-        mimeType,
+      const mediaRecorderOptions: MediaRecorderOptions = {
         audioBitsPerSecond: 128000
-      });
+      };
+      
+      // 只有在有有效mimeType时才添加
+      if (mimeType) {
+        mediaRecorderOptions.mimeType = mimeType;
+      }
+      
+      console.log('创建MediaRecorder，配置:', mediaRecorderOptions);
+      this.mediaRecorder = new MediaRecorder(this.audioStream, mediaRecorderOptions);
 
       // 重置记录状态
       this.recordedChunks = [];
@@ -77,8 +84,8 @@ export class WhisperAudioService implements IAudioService {
         this.onErrorCallback?.(error);
       };
 
-      // 开始录音，每3秒生成一个数据块
-      this.mediaRecorder.start(3000);
+      // 开始录音，每5秒生成一个数据块（减少API调用频率）
+      this.mediaRecorder.start(5000);
 
       return this.audioStream;
     } catch (error) {
@@ -125,57 +132,86 @@ export class WhisperAudioService implements IAudioService {
   }
 
   async transcribe(audioBlob: Blob, options?: TranscriptionOptions): Promise<TranscriptionResult> {
+    const transcribeId = Date.now();
+    
     try {
-      console.log('开始转录音频，原始音频大小:', audioBlob.size, '类型:', audioBlob.type);
+      console.log(`[${transcribeId}] 开始转录音频，原始音频大小:`, audioBlob.size, '类型:', audioBlob.type);
+      
+      // 检查音频大小是否合理
+      if (audioBlob.size < 1000) { // 提高最小阈值到1KB
+        console.warn(`[${transcribeId}] 音频太小 (${audioBlob.size} bytes)，跳过转录`);
+        return { text: '', confidence: 0 };
+      }
+      
+      if (audioBlob.size > 25 * 1024 * 1024) { // 25MB限制
+        console.warn(`[${transcribeId}] 音频太大 (${audioBlob.size} bytes)，可能会失败`);
+      }
       
       // 检查API密钥
       const apiKey = this.getApiKey();
-      console.log('API密钥状态:', apiKey ? `有效 (前6位: ${apiKey.substring(0, 6)}...)` : '未找到');
+      console.log(`[${transcribeId}] API密钥状态:`, apiKey ? `有效 (前6位: ${apiKey.substring(0, 6)}...)` : '未找到');
       
       // 将音频转换为WAV格式（Whisper API要求）
-      console.log('开始转换音频格式为WAV...');
+      console.log(`[${transcribeId}] 开始转换音频格式为WAV...`);
       const wavBlob = await this.convertToWav(audioBlob);
-      console.log('WAV转换完成，大小:', wavBlob.size, '类型:', wavBlob.type);
+      console.log(`[${transcribeId}] WAV转换完成，大小:`, wavBlob.size, '类型:', wavBlob.type);
       
       // 调用Whisper API
       const formData = new FormData();
-      formData.append('file', wavBlob, 'audio.wav');
+      formData.append('file', wavBlob, `audio_${transcribeId}.wav`);
       formData.append('model', options?.model || 'whisper-1');
       
       if (options?.language) {
         formData.append('language', options.language);
-        console.log('设置语言:', options.language);
+        console.log(`[${transcribeId}] 设置语言:`, options.language);
       }
       
       if (options?.prompt) {
         formData.append('prompt', options.prompt);
-        console.log('设置提示词:', options.prompt);
+        console.log(`[${transcribeId}] 设置提示词:`, options.prompt);
       }
 
       if (options?.temperature !== undefined) {
         formData.append('temperature', options.temperature.toString());
-        console.log('设置温度:', options.temperature);
+        console.log(`[${transcribeId}] 设置温度:`, options.temperature);
       }
 
-      console.log('发送Whisper API请求...');
+      console.log(`[${transcribeId}] 发送Whisper API请求...`);
+      
+      // 添加超时控制
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+      
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
         },
         body: formData,
+        signal: controller.signal
       });
 
-      console.log('Whisper API响应状态:', response.status, response.statusText);
+      clearTimeout(timeoutId);
+      console.log(`[${transcribeId}] Whisper API响应状态:`, response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Whisper API错误响应:', errorText);
-        throw new Error(`Whisper API error: ${response.status} ${response.statusText} - ${errorText}`);
+        console.error(`[${transcribeId}] Whisper API错误响应:`, errorText);
+        
+        // 针对不同错误码的处理
+        if (response.status === 429) {
+          throw new Error(`API调用频率限制，请稍后重试`);
+        } else if (response.status === 400) {
+          throw new Error(`音频格式或参数错误: ${errorText}`);
+        } else if (response.status === 401) {
+          throw new Error(`API密钥无效，请检查设置`);
+        } else {
+          throw new Error(`Whisper API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
       }
 
       const result = await response.json();
-      console.log('转录结果:', result);
+      console.log(`[${transcribeId}] 转录结果:`, result);
       
       return {
         text: result.text || '',
@@ -183,8 +219,16 @@ export class WhisperAudioService implements IAudioService {
         segments: result.segments || undefined
       };
     } catch (error) {
-      console.error('转录详细错误:', error);
-      throw new Error(`Transcription failed: ${error}`);
+      console.error(`[${transcribeId}] 转录详细错误:`, error);
+      
+      // 根据错误类型提供更有用的错误信息
+      if (error.name === 'AbortError') {
+        throw new Error(`转录超时，请尝试较短的音频片段`);
+      } else if (error.message.includes('API调用频率限制')) {
+        throw error; // 保持原始错误信息
+      } else {
+        throw new Error(`转录失败: ${error.message}`);
+      }
     }
   }
 
@@ -238,27 +282,39 @@ export class WhisperAudioService implements IAudioService {
 
   // 私有方法
   private getSupportedMimeType(): string {
+    // 优先选择Whisper API支持的格式
     const types = [
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/mp4',
-      'audio/ogg;codecs=opus',
+      'audio/wav',           // 首选WAV
+      'audio/mp3',           // MP3
+      'audio/mp4',           // MP4
+      'audio/mpeg',          // MPEG
+      'audio/webm;codecs=opus', // WebM with Opus
+      'audio/webm',          // WebM
+      'audio/ogg;codecs=opus', // OGG with Opus  
+      'audio/ogg',           // OGG
     ];
 
     for (const type of types) {
       if (MediaRecorder.isTypeSupported(type)) {
+        console.log('选择音频格式:', type);
         return type;
       }
     }
 
-    throw new Error('No supported audio MIME type found');
+    // 如果都不支持，使用默认格式
+    console.warn('没有找到理想的音频格式，使用浏览器默认格式');
+    return '';
   }
 
   private async convertToWav(audioBlob: Blob): Promise<Blob> {
-    // 简单的WAV转换实现
-    // 在生产环境中，建议使用专业的音频处理库
     try {
       console.log('开始WAV转换，原始格式:', audioBlob.type, '大小:', audioBlob.size);
+      
+      // 如果已经是WAV格式，直接返回
+      if (audioBlob.type === 'audio/wav') {
+        console.log('已经是WAV格式，直接返回');
+        return audioBlob;
+      }
       
       const arrayBuffer = await audioBlob.arrayBuffer();
       console.log('ArrayBuffer大小:', arrayBuffer.byteLength);
@@ -269,17 +325,27 @@ export class WhisperAudioService implements IAudioService {
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       console.log('音频解码成功 - 时长:', audioBuffer.duration, '采样率:', audioBuffer.sampleRate, '声道数:', audioBuffer.numberOfChannels);
       
+      // 检查音频是否有有效数据
+      if (audioBuffer.duration === 0) {
+        throw new Error('音频时长为0，无有效数据');
+      }
+      
       const wavBuffer = this.audioBufferToWav(audioBuffer);
       console.log('WAV编码完成，大小:', wavBuffer.byteLength);
       
       return new Blob([wavBuffer], { type: 'audio/wav' });
     } catch (error) {
-      // 如果转换失败，返回原始Blob
-      console.warn('WAV转换失败，使用原始音频:', error);
-      console.log('原始音频信息 - 类型:', audioBlob.type, '大小:', audioBlob.size);
+      console.error('WAV转换失败，详细错误:', error);
       
-      // 如果原始格式不是WAV，尝试直接返回（可能Whisper能处理）
-      return audioBlob;
+      // 尝试直接使用原始音频（可能是MP3或其他格式）
+      if (audioBlob.type.startsWith('audio/')) {
+        console.log('尝试直接使用原始音频格式:', audioBlob.type);
+        return audioBlob;
+      }
+      
+      // 如果完全无法处理，创建一个有效的空WAV文件
+      console.warn('创建空WAV文件作为回退');
+      return this.createEmptyWav();
     }
   }
 
@@ -365,6 +431,43 @@ export class WhisperAudioService implements IAudioService {
     }
     
     return apiKey.trim();
+  }
+
+  private createEmptyWav(): Blob {
+    // 创建一个1秒的空WAV文件
+    const sampleRate = 44100;
+    const duration = 1; // 1秒
+    const length = sampleRate * duration;
+    const arrayBuffer = new ArrayBuffer(44 + length * 2);
+    const view = new DataView(arrayBuffer);
+
+    // WAV头部
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true); // 单声道
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length * 2, true);
+
+    // 静音数据（全部为0）
+    for (let i = 44; i < arrayBuffer.byteLength; i += 2) {
+      view.setInt16(i, 0, true);
+    }
+
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
   }
 
   private cleanup(): void {

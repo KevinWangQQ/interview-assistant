@@ -376,12 +376,22 @@ export const useInterviewStore = create<InterviewStore>()(
           console.error('音频处理详细错误信息:', error);
           console.error('错误堆栈:', error instanceof Error ? error.stack : 'No stack trace');
           set({ isProcessingAudio: false });
+          
+          // 错误恢复：不阻止后续音频处理
+          const errorMessage = error instanceof Error ? error.message : '未知错误';
+          console.warn('音频处理失败，但继续录音:', errorMessage);
+          
           get().setError({
             code: 'PROCESS_AUDIO_FAILED',
-            message: '音频处理失败',
+            message: `音频处理失败: ${errorMessage}`,
             details: error,
             timestamp: new Date()
           });
+          
+          // 3秒后自动清除错误，允许用户继续
+          setTimeout(() => {
+            get().clearError();
+          }, 3000);
         }
       },
 
