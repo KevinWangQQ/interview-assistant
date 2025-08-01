@@ -195,6 +195,16 @@ export class WhisperAudioService implements IAudioService {
       console.log('  - MIME类型:', audioToSend.type);
       console.log('  - 文件大小:', audioToSend.size);
       
+      // 检查音频数据的前几个字节来验证格式
+      const arrayBuffer = await audioToSend.slice(0, 16).arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+      console.log(`[${transcribeId}] 音频数据头部 (前16字节):`, hex);
+      
+      // 检查是否是有效的音频格式标识
+      const header = new TextDecoder('ascii', { fatal: false }).decode(bytes.slice(0, 4));
+      console.log(`[${transcribeId}] 文件头部标识:`, header);
+      
       // 调用Whisper API
       const formData = new FormData();
       formData.append('file', audioToSend, fileName);
@@ -236,6 +246,44 @@ export class WhisperAudioService implements IAudioService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[${transcribeId}] Whisper API错误响应:`, errorText);
+        
+        // 如果是格式错误且是WebM，尝试WAV转换作为最后回退
+        if (response.status === 400 && errorText.includes('Invalid file format') && fileName.includes('.webm')) {
+          console.warn(`[${transcribeId}] WebM格式被拒绝，尝试WAV转换作为回退...`);
+          try {
+            const wavBlob = await this.convertToWav(audioBlob);
+            const wavFormData = new FormData();
+            wavFormData.append('file', wavBlob, `audio_${transcribeId}_fallback.wav`);
+            wavFormData.append('model', options?.model || 'whisper-1');
+            
+            if (options?.language) {
+              wavFormData.append('language', options.language);
+            }
+            
+            console.log(`[${transcribeId}] 发送WAV回退，大小:`, wavBlob.size);
+            
+            const wavResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+              },
+              body: wavFormData,
+              signal: controller.signal
+            });
+            
+            if (wavResponse.ok) {
+              const wavResult = await wavResponse.json();
+              console.log(`[${transcribeId}] WAV回退转录成功:`, wavResult);
+              return {
+                text: wavResult.text || '',
+                confidence: 0.9,
+                segments: wavResult.segments || undefined
+              };
+            }
+          } catch (wavError) {
+            console.error(`[${transcribeId}] WAV回退也失败:`, wavError);
+          }
+        }
         
         // 针对不同错误码的处理
         if (response.status === 429) {
