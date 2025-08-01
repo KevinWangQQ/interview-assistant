@@ -154,10 +154,11 @@ export class WhisperAudioService implements IAudioService {
       // 直接使用原始音频格式，让Whisper API处理格式转换
       console.log(`[${transcribeId}] 直接使用原始音频格式:`, audioBlob.type);
       
-      // 根据音频类型确定文件扩展名
+      // 根据音频类型确定文件扩展名 - 直接使用原始格式
       let fileName = `audio_${transcribeId}`;
-      let audioToSend = audioBlob;
+      const audioToSend = audioBlob; // 始终使用原始音频
       
+      // 根据MIME类型确定扩展名
       if (audioBlob.type.includes('webm')) {
         fileName += '.webm';
       } else if (audioBlob.type.includes('mp4')) {
@@ -166,20 +167,20 @@ export class WhisperAudioService implements IAudioService {
         fileName += '.wav';
       } else if (audioBlob.type.includes('ogg')) {
         fileName += '.ogg';
+      } else if (audioBlob.type.includes('mpeg') || audioBlob.type.includes('mp3')) {
+        fileName += '.mp3';
       } else {
-        // 如果类型不明确，尝试WAV转换作为回退
-        console.log(`[${transcribeId}] 未知音频类型，尝试WAV转换...`);
-        try {
-          audioToSend = await this.convertToWav(audioBlob);
-          fileName += '.wav';
-          console.log(`[${transcribeId}] WAV转换成功，大小:`, audioToSend.size);
-        } catch (error) {
-          console.warn(`[${transcribeId}] WAV转换失败，使用原始格式:`, error);
-          fileName += '.webm'; // 默认扩展名
-        }
+        // 对于未知类型，使用通用扩展名但不转换格式
+        console.log(`[${transcribeId}] 未知音频类型 (${audioBlob.type})，使用原始格式`);
+        fileName += '.webm'; // 默认扩展名，但仍使用原始数据
       }
       
-      console.log(`[${transcribeId}] 发送音频文件:`, fileName, '大小:', audioToSend.size);
+      // 验证音频数据
+      if (!audioToSend || audioToSend.size === 0) {
+        throw new Error('音频数据为空');
+      }
+      
+      console.log(`[${transcribeId}] 发送音频文件:`, fileName, '大小:', audioToSend.size, '类型:', audioToSend.type);
       
       // 调用Whisper API
       const formData = new FormData();

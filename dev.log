@@ -40,3 +40,10 @@
  ✓ Compiled in 44ms
  ✓ Compiled in 38ms
  ✓ Compiled in 64ms
+ GET / 200 in 216ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 277ms
+ GET / 200 in 196ms
+ GET / 200 in 99ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 253ms
+ ✓ Compiled in 73ms
+ ✓ Compiled in 45ms
