@@ -1,0 +1,17 @@
+
+> interview-assistant@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.4.5 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://10.176.2.129:3000
+
+ ✓ Starting...
+ ✓ Ready in 2.4s
+ ○ Compiling / ...
+ ✓ Compiled / in 2.4s
+ GET / 200 in 2667ms
+ GET / 200 in 166ms
+ GET / 200 in 106ms
+ ✓ Compiled /favicon.ico in 200ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 541ms

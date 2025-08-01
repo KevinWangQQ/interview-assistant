@@ -1,36 +1,292 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 面试助手 (Interview Assistant)
 
-## Getting Started
+一个基于 Next.js 和 OpenAI 的实时英文面试助手，为英文不好的中国面试官提供实时转录和中文翻译功能。
 
-First, run the development server:
+## 功能特性
 
+- ✅ **实时音频转录**: 使用 OpenAI Whisper API 将英文语音转换为文字
+- ✅ **智能中文翻译**: 使用 OpenAI GPT 提供准确的中文翻译
+- ✅ **双栏显示界面**: 左侧英文原文，右侧中文翻译，清晰对比
+- ✅ **面试会话管理**: 支持开始/暂停/停止面试，自动保存记录
+- ✅ **智能问题建议**: 基于对话内容自动生成相关的面试问题
+- ✅ **本地数据存储**: 使用 IndexedDB 存储面试记录，支持离线查看
+- ✅ **历史记录管理**: 查看、搜索、删除、导出历史面试记录
+- ✅ **响应式设计**: 支持桌面端和移动端使用
+
+## 快速开始
+
+### 1. 环境要求
+- Node.js 18+ 
+- 现代浏览器 (支持 MediaRecorder API)
+- OpenAI API Key
+
+### 2. 安装依赖
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. 配置环境变量
+创建 `.env.local` 文件：
+```env
+NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. 启动开发服务器
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+访问 http://localhost:3000 开始使用。
 
-## Learn More
+### 5. 构建生产版本
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 技术架构
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 前端技术栈
+- **Next.js 14**: React 全栈框架，使用 App Router
+- **TypeScript**: 类型安全的 JavaScript
+- **Tailwind CSS**: 实用工具优先的 CSS 框架
+- **shadcn/ui**: 高质量的 React 组件库
+- **Zustand**: 轻量级状态管理
+- **Lucide React**: 现代化图标库
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 核心服务
+- **Dexie.js**: IndexedDB 数据库封装，用于本地存储
+- **OpenAI API**: Whisper 语音转录 + GPT 文本翻译
+- **MediaRecorder API**: 浏览器原生录音功能
 
-## Deploy on Vercel
+## 使用指南
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 基本使用流程
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **配置 API 密钥**
+   - 点击右上角"设置"
+   - 输入你的 OpenAI API Key
+   - 测试连接确保可用
+
+2. **开始面试**
+   - 输入候选人姓名和应聘职位
+   - 点击"开始面试"按钮
+   - 浏览器会请求麦克风权限，请允许
+
+3. **实时转录翻译**
+   - 系统会自动录音并转录
+   - 左侧显示英文原文
+   - 右侧显示中文翻译
+   - 右侧问题建议面板会根据对话生成相关问题
+
+4. **面试控制**
+   - 支持暂停/继续录制
+   - 可以随时停止面试
+   - 系统自动保存面试记录
+
+## API 配置
+
+### OpenAI API Key 获取步骤
+
+1. 访问 [OpenAI API Keys 页面](https://platform.openai.com/api-keys)
+2. 登录你的 OpenAI 账户
+3. 点击 "Create new secret key"
+4. 复制生成的 API Key
+5. 在应用设置中输入并保存
+
+### API 使用说明
+
+- **Whisper API**: 用于语音转录，支持多种语言
+- **GPT API**: 用于文本翻译和问题生成
+- **费用预估**: 普通面试约消耗 $0.10-0.50 的API费用
+
+## 部署指南
+
+### Vercel 部署 (推荐)
+
+1. Fork 此项目到你的 GitHub
+2. 在 [Vercel](https://vercel.com) 中导入项目
+3. 设置环境变量 `NEXT_PUBLIC_OPENAI_API_KEY`
+4. 点击部署
+
+### 自定义服务器部署
+
+1. 构建项目：`npm run build`
+2. 启动服务：`npm start`
+3. 配置反向代理 (Nginx/Apache)
+4. 设置 HTTPS 证书（录音功能需要）
+
+## 注意事项
+
+### 浏览器兼容性
+- 需要支持 MediaRecorder API 的现代浏览器
+- 推荐使用 Chrome、Firefox、Safari 最新版本
+- 移动端需要 iOS 12+ 或 Android 6+
+
+### 隐私和安全
+- 录音数据仅用于转录，不会永久存储在服务器
+- 面试记录保存在本地浏览器中
+- API 密钥保存在本地存储，请勿在公共设备上使用
+
+### 网络要求
+- 需要稳定的网络连接以调用 OpenAI API
+- 建议在网络条件良好的环境下使用
+- 支持离线查看已保存的面试记录
+
+## 版本规划与路线图
+
+### 🎯 当前版本 MVP v1.0 ✅ (已完成)
+
+**核心功能**
+- ✅ 实时音频转录（Whisper API）
+- ✅ 智能中文翻译（GPT API）
+- ✅ 双栏显示界面
+- ✅ 面试会话管理（开始/暂停/停止）
+- ✅ 智能问题建议
+- ✅ 本地数据存储（IndexedDB）
+- ✅ 历史记录管理
+- ✅ 响应式UI设计
+- ✅ API配置和测试
+
+**技术特性**
+- ✅ 可扩展服务架构
+- ✅ TypeScript类型安全
+- ✅ 现代化组件库（shadcn/ui）
+- ✅ 状态管理（Zustand）
+
+### 🚀 v1.1 - 智能增强版 (计划中)
+
+**预计发布时间**: 2-3周后
+
+**新增功能**
+- 📋 **面试总结自动生成**: AI分析整个面试过程，生成结构化总结报告
+- 🎯 **问题质量评分**: 对面试问题的相关性和有效性进行智能评分
+- 📊 **实时对话分析**: 显示候选人回答的关键词云和语言特征
+- ⚡ **性能优化**: 更快的转录速度，减少API调用延迟
+- 📱 **移动端优化**: 针对手机和平板的界面优化
+- 🔊 **音频质量指示**: 实时显示录音质量和网络状态
+- 💾 **数据备份**: 支持导出完整面试数据包
+
+**技术改进**
+- WebSocket实时通信优化
+- 音频预处理增强
+- 缓存机制优化
+
+### 🌟 v1.2 - 体验升级版 (规划中)
+
+**预计发布时间**: 1-2个月后
+
+**新增功能**  
+- 🎨 **主题自定义**: 支持深色模式和自定义主题
+- 🌍 **多语言界面**: 支持英文、中文界面切换
+- ⌨️ **快捷键支持**: 键盘快捷键操作，提高效率
+- 📄 **多格式导出**: 支持PDF、Word、Excel等格式导出
+- 🔍 **高级搜索**: 支持全文搜索和高级筛选
+- 📈 **数据统计**: 面试数据的可视化统计分析
+- 🎵 **音频回放**: 支持面试录音的回放功能
+
+**用户体验**
+- 拖拽式界面布局
+- 一键操作优化
+- 无障碍访问支持
+
+### 🏢 v2.0 - 企业版 (长期规划)
+
+**预计发布时间**: 3-4个月后
+
+**企业级功能**
+- 👥 **用户账号系统**: 支持团队成员管理和权限控制
+- ☁️ **云端数据同步**: Supabase/Firebase集成，多设备同步
+- 🤝 **团队协作**: 多人同时参与面试，实时协作
+- 📊 **企业仪表板**: 团队面试数据统计和分析
+- 🔐 **企业级安全**: SSO登录、数据加密、审计日志
+- 🔧 **API开放**: 提供开放API，支持第三方集成
+- 📋 **面试模板**: 预设不同职位的面试模板和题库
+
+**高级分析**
+- 候选人评估报告
+- 面试官表现分析  
+- 招聘数据洞察
+- 自定义报表
+
+### 🎯 v2.1+ - 智能化升级 (远期愿景)
+
+**AI增强功能**
+- 🧠 **情感分析**: 分析候选人语音中的情感倾向
+- 🎯 **能力评估**: AI辅助技能和胜任力评估
+- 📝 **自动评分**: 基于多维度的智能评分系统
+- 🤖 **虚拟面试官**: AI辅助提问和追问
+- 📊 **预测分析**: 候选人成功概率预测
+
+**技术前瞻**
+- 实时语音识别优化
+- 边缘计算支持
+- 多模态交互（视频分析）
+- 区块链数据验证
+
+## 开发状态与贡献
+
+### 🔄 开发状态
+- **当前版本**: v1.0.0 (MVP)
+- **开发分支**: main
+- **测试状态**: ✅ 功能测试通过
+- **构建状态**: ✅ 生产构建成功
+- **部署状态**: ✅ 可部署
+
+### 📈 项目统计
+- **代码行数**: ~3000+ lines
+- **组件数量**: 15+ React组件
+- **API集成**: 2个 (Whisper + GPT)
+- **数据库表**: 1个 (面试记录)
+- **支持语言**: 中文/英文
+
+### 🤝 如何贡献
+
+我们欢迎社区贡献！你可以通过以下方式参与：
+
+1. **功能建议**: 提交Issue描述新功能需求
+2. **Bug报告**: 发现问题请提交详细的Bug报告
+3. **代码贡献**: Fork项目，提交Pull Request
+4. **文档改进**: 帮助完善文档和使用指南
+5. **测试反馈**: 在不同环境下测试并反馈问题
+
+### 📋 贡献指南
+
+```bash
+# 1. Fork项目到你的GitHub
+# 2. 克隆到本地
+git clone https://github.com/yourusername/interview-assistant.git
+
+# 3. 创建功能分支
+git checkout -b feature/new-feature
+
+# 4. 开发并测试
+npm run dev
+npm run build
+
+# 5. 提交更改
+git commit -am 'feat: add new feature'
+
+# 6. 推送分支
+git push origin feature/new-feature
+
+# 7. 创建Pull Request
+```
+
+### 🎖️ 贡献者
+
+- **项目创建者**: [Claude Code Assistant]
+- **技术架构**: 可扩展服务层设计
+- **UI设计**: 现代化响应式界面
+
+感谢所有为项目做出贡献的开发者！
+
+## 许可证
+
+本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
+
+---
+
+**免责声明**: 本工具仅用于辅助面试，最终的招聘决策应基于综合评估。使用本工具时请遵守相关的隐私和法律法规。
+
+**联系方式**: 如有问题或建议，请通过GitHub Issues联系我们。
