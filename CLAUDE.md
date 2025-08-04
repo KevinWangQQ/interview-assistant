@@ -1,162 +1,187 @@
-# Interview Assistant - Claude Development Guide
+# CLAUDE.md
 
-## 项目概述
-这是一个面试助手应用，为中国面试官提供实时英文转录和中文翻译服务。使用Next.js 14、TypeScript、Zustand、shadcn/ui等技术栈。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 核心功能
-- 实时语音转录（OpenAI Whisper API）
-- 中英文翻译（OpenAI GPT API）
-- 双栏显示界面
-- 智能问题建议
-- 面试记录管理
-- 本地存储（IndexedDB + Dexie.js）
+## Project Overview
 
-## 开发最佳实践
+This is an AI-powered interview assistant application that provides real-time English-to-Chinese transcription and translation for Chinese interviewers conducting English interviews. Built with Next.js 14, TypeScript, and advanced audio processing capabilities.
 
-### 本地服务器部署流程
-**重要：每次启动开发服务器时必须按此流程执行**
+## Key Development Commands
 
-1. **清理端口占用**
-   ```bash
-   lsof -ti:3000 | xargs kill -9
-   lsof -ti:3001 | xargs kill -9
-   pkill -f "next dev"
-   ```
-
-2. **启动开发服务器**
-   ```bash
-   cd /Users/kevin/Work/Code/Interview\ Agent/interview-assistant
-   npm run dev
-   ```
-
-3. **验证服务器状态**
-   ```bash
-   # 等待3-5秒后验证
-   curl -I http://localhost:3000
-   lsof -i :3000
-   ```
-
-4. **故障排除**
-   - 如果浏览器无法访问，尝试：`http://127.0.0.1:3000`
-   - 检查防火墙设置
-   - 清除浏览器缓存，尝试无痕模式
-   - 查看 `dev.log` 文件了解错误信息
-
-### 代码规范
-
-#### API密钥管理
-- 优先从环境变量获取：`process.env.NEXT_PUBLIC_OPENAI_API_KEY`
-- 其次从localStorage：`localStorage.getItem('openai_api_key')`
-- 最后从应用配置：`localStorage.getItem('interview-assistant-config')`
-
-#### 错误处理
-- 所有异步操作都必须包含try-catch
-- 使用详细的console.log记录调试信息
-- 错误信息要包含上下文和堆栈信息
-
-#### 服务架构
-- 使用服务抽象层（interfaces.ts）
-- 所有服务都要实现依赖注入
-- 状态管理统一使用Zustand
-
-### 调试技巧
-
-#### 音频处理调试
-- 在Whisper服务中已添加详细日志
-- 在Store中增加了完整的错误跟踪
-- 使用调试页面测试各个功能模块
-
-#### 常用调试命令
-```bash
-# 查看实时日志
-tail -f dev.log
-
-# 检查端口状态
-lsof -i :3000
-
-# 测试API连接
-curl http://localhost:3000
-
-# 清理Next.js缓存
-rm -rf .next
-```
-
-### 项目结构
-```
-src/
-├── app/              # Next.js 14 App Router
-├── components/       # UI组件
-├── hooks/           # 自定义Hook
-├── services/        # 服务层
-├── store/           # Zustand状态管理
-├── types/           # TypeScript类型定义
-└── lib/             # 工具函数
-```
-
-### 重要文件说明
-- `src/services/audio/whisper-audio.ts` - Whisper API集成
-- `src/services/translation/openai-translation.ts` - OpenAI翻译服务
-- `src/store/interview-store.ts` - 核心状态管理
-- `src/hooks/use-audio-processor.ts` - 音频处理Hook
-- `src/components/debug/function-test.tsx` - 调试测试组件
-
-### 部署检查清单
-- [ ] 端口清理完成
-- [ ] 服务器正常启动
-- [ ] HTTP连接测试通过
-- [ ] 浏览器能正常访问
-- [ ] API密钥已配置
-- [ ] 音频权限已授权
-- [ ] 控制台无错误信息
-
-### 故障排除优先级
-1. **端口占用** - 清理所有相关进程
-2. **服务器状态** - 验证HTTP响应
-3. **网络连接** - 尝试不同地址
-4. **缓存问题** - 清除浏览器缓存
-5. **权限问题** - 检查麦克风权限
-6. **API配置** - 验证密钥设置
-
-## 常见问题解决方案
-
-### PROCESS_AUDIO_FAILED错误
-1. 检查API密钥配置
-2. 验证音频格式转换
-3. 查看Whisper API响应
-4. 检查网络连接
-
-### 录音功能异常
-1. 检查浏览器麦克风权限
-2. 验证MediaRecorder支持
-3. 确认音频设备正常
-
-### 翻译功能失败
-1. 验证OpenAI API密钥
-2. 检查API调用限制
-3. 查看网络连接状态
-
-## 开发命令速查
+### Essential Development Workflow
 
 ```bash
-# 安装依赖
-npm install
+# Port cleanup (CRITICAL - run before each dev session)
+lsof -ti:3000 | xargs kill -9
+lsof -ti:3001 | xargs kill -9
+pkill -f "next dev"
 
-# 开发服务器
+# Start development server
 npm run dev
 
-# 构建项目
-npm run build
+# Verify server status
+curl -I http://localhost:3000
+lsof -i :3000
 
-# 生产服务器
+# Build and production
+npm run build
 npm run start
-
-# 类型检查
-npm run build
-
-# 代码格式化
 npm run lint
 ```
 
----
+### Debugging Commands
 
-**重要提醒：每次修改代码后如果遇到服务器问题，请严格按照上述部署流程重新启动服务器。这是经过验证的最佳实践，能解决99%的本地开发问题。**
+```bash
+# Real-time log monitoring
+tail -f dev.log
+
+# Clear Next.js cache if needed
+rm -rf .next
+
+# Test API connectivity
+curl http://localhost:3000
+```
+
+## Architecture Overview
+
+### Service Layer Architecture
+
+The application follows a multi-layered service architecture with dependency injection:
+
+- **Enhanced Audio Processing**: Multi-source audio capture (microphone + system audio) with WAV format optimization for Whisper API compatibility
+- **Smart Segmentation**: Semantic-aware text segmentation based on sentence completion, speaker changes, and timing
+- **AI-Powered Analysis**: GPT-4 driven interview summarization with chunking strategies for large transcriptions
+- **Storage Abstraction**: Interface-based storage with local IndexedDB and extensibility for cloud providers
+
+### Core Services
+
+1. **Audio Services** (`src/services/streaming/`)
+   - `enhanced-wav-streaming-transcription.ts`: Multi-source audio capture with AudioContext direct PCM recording
+   - `wav-streaming-transcription.ts`: Basic WAV streaming for Whisper compatibility
+   - Handles Teams meeting audio scenarios with system audio capture
+
+2. **AI Analysis Services** (`src/services/interview-summary/`)
+   - `gpt4-summary-service.ts`: Professional interview analysis with English-first processing
+   - `summary-generation-manager.ts`: Async workflow management with progress tracking
+   - `text-chunking.ts`: Token-aware text segmentation for large transcripts
+
+3. **Storage Services** (`src/services/storage/`)
+   - `enhanced-interview-storage.ts`: Complete interview session management
+   - Supports search, filtering, batch operations, and multi-format export
+   - Built-in data validation and storage limits
+
+### State Management
+
+Uses Zustand with specialized stores:
+- `enhanced-wav-streaming-store.ts`: Multi-audio source recording state
+- `interview-history-store.ts`: Interview session management
+- Each store handles specific domain logic with async operations
+
+### Smart Segmentation System
+
+The `SmartSegmentationProcessor` (`src/utils/smart-segmentation.ts`) provides:
+- Semantic boundary detection based on sentence completion
+- Speaker change detection for interview flow
+- Time-based segmentation with configurable thresholds
+- Context preservation across segments
+
+## Key Architectural Patterns
+
+### Service Abstraction
+
+All services implement interfaces from `src/services/interfaces.ts` enabling:
+- Easy testing with mock implementations
+- Future migration to cloud services
+- Consistent error handling and logging
+
+### Event-Driven Architecture
+
+Audio and transcription services use event emitters for:
+- Real-time progress updates
+- Error propagation
+- State synchronization across components
+
+### Multi-Audio Source Processing
+
+The enhanced streaming service combines:
+- Microphone input for interviewer voice
+- System audio capture for Teams meeting participants
+- Real-time audio quality monitoring
+- AudioContext-based WAV file construction
+
+## API Key Management Priority
+
+1. Environment variables: `process.env.NEXT_PUBLIC_OPENAI_API_KEY`
+2. localStorage: `localStorage.getItem('openai_api_key')`
+3. App config: `localStorage.getItem('interview-assistant-config')`
+
+## Critical Development Practices
+
+### Audio Processing
+- Always use WAV format for Whisper API compatibility
+- Implement comprehensive error handling for audio format issues
+- Monitor audio quality metrics in real-time
+- Support both single and multi-source audio scenarios
+
+### AI Integration
+- Process English transcripts first for higher accuracy
+- Use semantic chunking for GPT-4 analysis of long content
+- Implement retry mechanisms with exponential backoff
+- Track confidence scores and processing statistics
+
+### Data Management
+- Validate all interview session data before storage
+- Implement storage limits and auto-cleanup
+- Support incremental saves during long interviews
+- Provide comprehensive export options
+
+## Component Architecture
+
+### Interview Flow Components
+- `enhanced-interview-main.tsx`: Main interview interface with multi-audio support
+- `audio-setup-guide.tsx`: Guided audio configuration for Teams scenarios
+- Components follow event-driven patterns with state lifting
+
+### UI Patterns
+- Uses shadcn/ui components with consistent theming
+- Implements loading states and error boundaries
+- Responsive design with mobile-first approach
+
+## Testing and Debugging
+
+### Audio Debugging
+- Check browser MediaRecorder API support
+- Verify microphone permissions
+- Test system audio capture capabilities
+- Monitor WAV file format construction
+
+### AI Service Debugging
+- Validate token counts before GPT-4 calls
+- Check API rate limits and quotas
+- Monitor chunking effectiveness for large texts
+- Track summary generation progress
+
+## Deployment Considerations
+
+- Requires HTTPS for microphone access in production
+- Audio processing needs sufficient memory allocation
+- Consider API rate limits for concurrent users
+- IndexedDB storage has browser-specific limits
+
+## File Structure Highlights
+
+```
+src/
+├── services/
+│   ├── streaming/           # Audio capture and transcription
+│   ├── interview-summary/   # AI-powered analysis
+│   └── storage/            # Data persistence
+├── utils/
+│   └── smart-segmentation.ts  # Semantic text processing
+├── types/
+│   └── enhanced-interview.ts  # Complete data models
+└── components/
+    └── interview/          # Core interview UI
+```
+
+The codebase prioritizes reliability, extensibility, and professional interview scenarios with sophisticated audio handling and AI analysis capabilities.

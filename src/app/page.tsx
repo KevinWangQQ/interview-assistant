@@ -1,45 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { InterviewControls } from '@/components/interview/interview-controls';
-import { TranscriptionPanel } from '@/components/interview/transcription-panel';
-import { QuestionSuggestions } from '@/components/interview/question-suggestions';
 import { InterviewHistory } from '@/components/interview/interview-history';
-import { ApiSettings } from '@/components/settings/api-settings';
-import { FunctionTest } from '@/components/debug/function-test';
-import { Navigation } from '@/components/layout/navigation';
-import { useInterviewStore } from '@/store/interview-store';
-import { Mic, MessageSquare, Lightbulb } from 'lucide-react';
+import { InterviewSettings } from '@/components/interview/interview-settings';
+import { StreamingErrorBoundary } from '@/components/streaming/streaming-error-boundary';
+import { EnhancedInterviewMain } from '@/components/interview/enhanced-interview-main';
+import { useWAVStreamingStore } from '@/store/wav-streaming-store';
+import { Mic, History, Settings } from 'lucide-react';
 
-type ViewType = 'interview' | 'history' | 'settings' | 'debug';
+type ViewType = 'interview' | 'history' | 'settings';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>('interview');
-  const { loadSessions, clearError } = useInterviewStore();
-
-  useEffect(() => {
-    // 初始化应用数据
-    loadSessions();
-    clearError();
-  }, [loadSessions, clearError]);
 
   const renderCurrentView = () => {
     switch (currentView) {
       case 'interview':
-        return (
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-            {/* 左侧控制面板 */}
-            <div className="xl:col-span-1 space-y-6">
-              <InterviewControls />
-              <QuestionSuggestions />
-            </div>
-
-            {/* 右侧转录面板 */}
-            <div className="xl:col-span-3">
-              <TranscriptionPanel />
-            </div>
-          </div>
-        );
+        return <EnhancedInterviewMain />;
       
       case 'history':
         return (
@@ -49,21 +26,10 @@ export default function Home() {
         );
       
       case 'settings':
-        return (
-          <div className="max-w-2xl mx-auto">
-            <ApiSettings />
-          </div>
-        );
-      
-      case 'debug':
-        return (
-          <div className="max-w-4xl mx-auto">
-            <FunctionTest />
-          </div>
-        );
+        return <InterviewSettings />;
       
       default:
-        return null;
+        return <EnhancedInterviewMain />;
     }
   };
 
@@ -79,44 +45,56 @@ export default function Home() {
                 面试助手
               </div>
               <div className="hidden sm:block text-sm text-muted-foreground">
-                Interview Assistant - 实时英文转录与中文翻译
+                实时语音转录与翻译
               </div>
             </div>
             
-            <Navigation 
-              currentView={currentView} 
-              onViewChange={setCurrentView} 
-            />
+            {/* 简化导航 */}
+            <nav className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentView('interview')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentView === 'interview' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+              >
+                <Mic className="h-4 w-4 mr-1 inline-block" />
+                面试
+              </button>
+              <button
+                onClick={() => setCurrentView('history')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentView === 'history' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+              >
+                <History className="h-4 w-4 mr-1 inline-block" />
+                历史
+              </button>
+              <button
+                onClick={() => setCurrentView('settings')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentView === 'settings' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+              >
+                <Settings className="h-4 w-4 mr-1 inline-block" />
+                设置
+              </button>
+            </nav>
           </div>
         </div>
       </header>
 
       {/* 主要内容区域 */}
       <main className="container mx-auto px-4 py-6">
-        {renderCurrentView()}
+        <StreamingErrorBoundary>
+          {renderCurrentView()}
+        </StreamingErrorBoundary>
       </main>
-
-      {/* 底部信息 */}
-      <footer className="border-t bg-card mt-12">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                <span>实时转录</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-4 w-4" />
-                <span>智能建议</span>
-              </div>
-            </div>
-            <div className="text-center md:text-right">
-              <p>Powered by OpenAI Whisper & GPT</p>
-              <p className="text-xs mt-1">为英文面试提供实时翻译支持</p>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

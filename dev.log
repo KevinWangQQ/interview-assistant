@@ -1,71 +1,105 @@
 
 > interview-assistant@0.1.0 dev
-> next dev --turbopack
+> next dev
 
-   ▲ Next.js 15.4.5 (Turbopack)
+   ▲ Next.js 15.4.5
    - Local:        http://localhost:3000
-   - Network:      http://10.176.2.129:3000
+   - Network:      http://10.176.2.119:3000
+   - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 943ms
+ ✓ Ready in 2.6s
  ○ Compiling / ...
- ✓ Compiled / in 2.8s
- GET / 200 in 3098ms
- ✓ Compiled /favicon.ico in 154ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 473ms
- HEAD / 200 in 50ms
- GET / 200 in 50ms
- GET / 200 in 288ms
- GET / 200 in 349ms
- ✓ Compiled in 76ms
- ✓ Compiled in 38ms
- GET / 200 in 225ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 251ms
+ ✓ Compiled / in 1932ms (932 modules)
+ HEAD / 200 in 2285ms
+ GET / 200 in 52ms
+ ✓ Compiled in 465ms (932 modules)
+ GET / 200 in 121ms
+ ✓ Compiled in 182ms (932 modules)
+ GET / 200 in 34ms
+ ✓ Compiled in 169ms (932 modules)
+ GET / 200 in 53ms
+ ✓ Compiled in 167ms (932 modules)
+ GET / 200 in 52ms
+ ✓ Compiled in 163ms (932 modules)
+ GET / 200 in 51ms
+ ✓ Compiled in 254ms (932 modules)
+ GET / 200 in 53ms
+ ⨯ ./src/components/interview/enhanced-interview-main.tsx
+Module parse failed: Identifier 'segments' has already been declared (17:69)
+|     const [recordingTime, setRecordingTime] = useState(0);
+|     const [segments, setSegments] = useState([]);
+>     const { isActive, isProcessing, currentText, currentTranslation, segments, error, startStreaming, stopStreaming, clearError } = useWAVStreamingStore();
+|     // 录制时间计时器
+|     useEffect({
+
+Import trace for requested module:
+./src/components/interview/enhanced-interview-main.tsx
+./src/app/page.tsx
+ ✓ Compiled in 319ms (934 modules)
+ GET / 200 in 84ms
+ ✓ Compiled in 153ms (934 modules)
+ GET / 200 in 62ms
+ ✓ Compiled in 153ms (934 modules)
+ GET / 200 in 51ms
+ ✓ Compiled in 349ms (906 modules)
+ GET / 200 in 111ms
+ HEAD / 200 in 83ms
+ ✓ Compiled in 142ms (906 modules)
+ GET / 200 in 84ms
+ ✓ Compiled in 195ms (912 modules)
+ GET / 200 in 49ms
+ ✓ Compiled in 117ms (912 modules)
+ GET / 200 in 48ms
+ ✓ Compiled in 110ms (912 modules)
+ GET / 200 in 46ms
+ GET / 200 in 215ms
+ ✓ Compiled in 578ms (912 modules)
+ GET / 200 in 111ms
+ ✓ Compiled in 130ms (912 modules)
+ GET / 200 in 111ms
+ ✓ Compiled in 149ms (912 modules)
+ GET / 200 in 54ms
+ ✓ Compiled in 138ms (912 modules)
+ GET / 200 in 111ms
+ ✓ Compiled in 158ms (912 modules)
+ GET / 200 in 109ms
+ ✓ Compiled in 155ms (912 modules)
+ GET / 200 in 80ms
+ ✓ Compiled in 115ms (912 modules)
  GET / 200 in 75ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 258ms
- ✓ Compiled in 57ms
- ✓ Compiled in 39ms
- ✓ Compiled in 43ms
- GET / 200 in 235ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 268ms
- ✓ Compiled in 94ms
- ✓ Compiled in 45ms
- ✓ Compiled in 48ms
- ✓ Compiled in 45ms
- ✓ Compiled in 42ms
- GET / 200 in 224ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 275ms
- ✓ Compiled in 83ms
- ✓ Compiled in 55ms
- ✓ Compiled in 44ms
- ✓ Compiled in 38ms
- ✓ Compiled in 64ms
- GET / 200 in 216ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 277ms
- GET / 200 in 196ms
- GET / 200 in 99ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 253ms
- ✓ Compiled in 73ms
- ✓ Compiled in 45ms
- GET / 200 in 271ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 272ms
- ✓ Compiled in 63ms
- ✓ Compiled in 56ms
- ✓ Compiled in 47ms
- ✓ Compiled in 49ms
- ✓ Compiled in 48ms
- HEAD / 200 in 440ms
- GET / 200 in 243ms
- ✓ Compiled in 82ms
- ✓ Compiled in 34ms
- GET / 200 in 224ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 277ms
- ✓ Compiled in 152ms
- GET / 200 in 216ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 262ms
- ✓ Compiled in 45ms
- GET / 200 in 225ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 258ms
- ✓ Compiled in 63ms
- ✓ Compiled in 47ms
- ✓ Compiled in 46ms
+ ✓ Compiled in 120ms (912 modules)
+ GET / 200 in 81ms
+ ✓ Compiled in 146ms (912 modules)
+ GET / 200 in 107ms
+ ✓ Compiled in 122ms (912 modules)
+ GET / 200 in 63ms
+ ✓ Compiled in 131ms (912 modules)
+ GET / 200 in 65ms
+ HEAD / 200 in 102ms
+ GET / 200 in 63ms
+ ✓ Compiled in 308ms (912 modules)
+ GET / 200 in 126ms
+ GET / 200 in 12ms
+ ✓ Compiled in 154ms (912 modules)
+ GET / 200 in 96ms
+ GET / 200 in 15ms
+ ✓ Compiled in 231ms (912 modules)
+ GET / 200 in 54ms
+ GET / 200 in 6ms
+ ✓ Compiled in 138ms (912 modules)
+ GET / 200 in 72ms
+ GET / 200 in 13ms
+ ✓ Compiled in 126ms (912 modules)
+ GET / 200 in 49ms
+ GET / 200 in 12ms
+ ✓ Compiled in 180ms (912 modules)
+ GET / 200 in 78ms
+ GET / 200 in 7ms
+ ✓ Compiled in 137ms (912 modules)
+ GET / 200 in 79ms
+ GET / 200 in 7ms
+ HEAD / 200 in 77ms
+ GET / 200 in 65ms
+ ✓ Compiled in 269ms (912 modules)
+ GET / 200 in 62ms

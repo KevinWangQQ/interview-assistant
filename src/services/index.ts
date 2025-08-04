@@ -103,6 +103,11 @@ class ServiceContainer {
   }
 
   getAudioService(): IAudioService {
+    // SSR环境下不初始化
+    if (typeof window === 'undefined') {
+      throw new Error('Audio service not available during SSR');
+    }
+    
     if (!this.services.has('audio')) {
       this.services.set('audio', this.factory.createAudioService('whisper'));
     }
@@ -110,6 +115,11 @@ class ServiceContainer {
   }
 
   getTranslationService(): ITranslationService {
+    // SSR环境下不初始化
+    if (typeof window === 'undefined') {
+      throw new Error('Translation service not available during SSR');
+    }
+    
     if (!this.services.has('translation')) {
       this.services.set('translation', this.factory.createTranslationService('openai'));
     }

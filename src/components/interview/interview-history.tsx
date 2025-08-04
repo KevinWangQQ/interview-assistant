@@ -18,7 +18,7 @@ import {
   FileText,
   Download
 } from 'lucide-react';
-import { useInterviewStore } from '@/store/interview-store';
+import { useInterviewHistoryStore } from '@/store/interview-history-store';
 import { InterviewSession } from '@/types';
 
 interface InterviewHistoryProps {
@@ -30,7 +30,7 @@ export function InterviewHistory({ className, onViewInterview }: InterviewHistor
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInterview, setSelectedInterview] = useState<InterviewSession | null>(null);
   
-  const { sessions, loadSessions, deleteSession } = useInterviewStore();
+  const { sessions, loadSessions, deleteSession } = useInterviewHistoryStore();
 
   useEffect(() => {
     loadSessions();

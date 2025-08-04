@@ -120,3 +120,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 自定义动画 */
+@layer utilities {
+  .animate-pulse-slow {
+    animation: pulse-slow 3s infinite;
+  }
+  
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+  
+  /* 自动滚动平滑过渡 */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+}

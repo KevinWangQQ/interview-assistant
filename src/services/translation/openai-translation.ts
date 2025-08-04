@@ -2,10 +2,11 @@
 
 import { ITranslationService, TranslationOptions } from '../interfaces';
 import { TranslationResult, QuestionSuggestion, InterviewSummary, TranscriptionSegment } from '@/types';
+import { apiKeyManager } from '@/lib/api-key-manager';
 import OpenAI from 'openai';
 
 export class OpenAITranslationService implements ITranslationService {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
   private usageStats = {
     tokensUsed: 0,
     requestsCount: 0,
@@ -13,15 +14,50 @@ export class OpenAITranslationService implements ITranslationService {
   };
 
   constructor(apiKey?: string) {
-    this.client = new OpenAI({
-      apiKey: apiKey || this.getApiKey(),
-      dangerouslyAllowBrowser: true // 在生产环境中应该通过后端API调用
-    });
+    // 延迟初始化，避免SSR问题
+    try {
+      this.client = new OpenAI({
+        apiKey: apiKey || this.getApiKey(),
+        dangerouslyAllowBrowser: true // 在生产环境中应该通过后端API调用
+      });
+    } catch (error) {
+      console.warn('OpenAI client 初始化失败，将在首次使用时重试:', error);
+      // 不在构造函数中抛出错误，延迟到实际使用时处理
+    }
+  }
+
+  private getApiKey(): string {
+    try {
+      return apiKeyManager.getOpenAIApiKey();
+    } catch (error) {
+      console.warn('获取API密钥失败:', error);
+      throw error;
+    }
+  }
+
+  private ensureClientInitialized(): void {
+    if (!this.client) {
+      try {
+        this.client = new OpenAI({
+          apiKey: this.getApiKey(),
+          dangerouslyAllowBrowser: true
+        });
+        console.log('OpenAI client 重新初始化成功');
+      } catch (error) {
+        console.error('OpenAI client 初始化失败:', error);
+        throw new Error('OpenAI client 初始化失败，请检查API密钥设置');
+      }
+    }
   }
 
   async translate(text: string, from: string, to: string): Promise<TranslationResult> {
+    const translateId = Date.now();
+    
     try {
+      console.log(`[${translateId}] 开始翻译:`, { text, from, to });
+      
       if (!text.trim()) {
+        console.log(`[${translateId}] 空文本，跳过翻译`);
         return {
           translatedText: '',
           confidence: 1.0,
@@ -29,9 +65,14 @@ export class OpenAITranslationService implements ITranslationService {
         };
       }
 
-      const prompt = this.buildTranslationPrompt(text, from, to);
+      this.ensureClientInitialized();
+      console.log(`[${translateId}] 客户端初始化完成`);
       
-      const response = await this.client.chat.completions.create({
+      const prompt = this.buildTranslationPrompt(text, from, to);
+      console.log(`[${translateId}] 发送翻译请求...`);
+      
+      // 使用Promise.race实现超时控制
+      const translationPromise = this.client!.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           {
@@ -46,18 +87,39 @@ export class OpenAITranslationService implements ITranslationService {
         temperature: 0.3,
         max_tokens: 500
       });
+      
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Translation timeout')), 15000);
+      });
+      
+      const response = await Promise.race([translationPromise, timeoutPromise]) as any;
+      console.log(`[${translateId}] 翻译API响应成功`);
 
       this.updateUsageStats(response.usage);
 
       const translatedText = response.choices[0]?.message?.content?.trim() || '';
+      console.log(`[${translateId}] 翻译结果:`, translatedText);
 
       return {
         translatedText,
-        confidence: 0.9, // 默认置信度
+        confidence: 0.9,
         originalText: text
       };
     } catch (error) {
-      throw new Error(`Translation failed: ${error}`);
+      console.error(`[${translateId}] 翻译失败:`, error);
+      
+      // 根据错误类型提供更有用的错误信息
+      if (error instanceof Error) {
+        if (error.message.includes('Translation timeout')) {
+          throw new Error(`翻译超时，请检查网络连接`);
+        } else if (error.message.includes('401')) {
+          throw new Error(`API密钥无效，请检查配置`);
+        } else if (error.message.includes('429')) {
+          throw new Error(`API调用频率限制，请稍后重试`);
+        }
+      }
+      
+      throw new Error(`翻译失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   }
 
@@ -78,6 +140,8 @@ export class OpenAITranslationService implements ITranslationService {
 
   async suggestQuestions(context: string[], interviewType = 'general'): Promise<QuestionSuggestion[]> {
     try {
+      this.ensureClientInitialized();
+      
       const contextText = context.slice(-5).join('\n'); // 使用最近5个对话作为上下文
       
       const prompt = `Based on the following interview conversation context, suggest 3-5 relevant follow-up questions that an interviewer might ask. 
@@ -99,7 +163,7 @@ Please provide questions in both English and Chinese, formatted as JSON array wi
 
 Focus on questions that naturally follow from the conversation and help assess the candidate's qualifications.`;
 
-      const response = await this.client.chat.completions.create({
+      const response = await this.client!.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           {
@@ -140,6 +204,8 @@ Focus on questions that naturally follow from the conversation and help assess t
 
   async generateSummary(segments: TranscriptionSegment[]): Promise<InterviewSummary> {
     try {
+      this.ensureClientInitialized();
+      
       const conversationText = segments
         .map(s => `${s.speaker === 'interviewer' ? 'Interviewer' : 'Candidate'}: ${s.originalText}`)
         .join('\n');
@@ -167,7 +233,7 @@ Format your response as JSON:
   "recommendation": "hiring recommendation and next steps"
 }`;
 
-      const response = await this.client.chat.completions.create({
+      const response = await this.client!.chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -218,7 +284,9 @@ Format your response as JSON:
 
   async detectLanguage(text: string): Promise<string> {
     try {
-      const response = await this.client.chat.completions.create({
+      this.ensureClientInitialized();
+      
+      const response = await this.client!.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           {
@@ -245,8 +313,10 @@ Format your response as JSON:
 
   async isAvailable(): Promise<boolean> {
     try {
+      this.ensureClientInitialized();
+      
       // 发送一个简单的测试请求
-      await this.client.chat.completions.create({
+      await this.client!.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: 'test' }],
         max_tokens: 1
@@ -294,39 +364,6 @@ ${text}`;
     }
   }
 
-  private getApiKey(): string {
-    // 从环境变量或配置中获取API密钥
-    let apiKey: string | null = null;
-    
-    // 优先从环境变量获取
-    if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_OPENAI_API_KEY) {
-      apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-    }
-    
-    // 其次从localStorage获取
-    if (!apiKey && typeof window !== 'undefined') {
-      apiKey = localStorage.getItem('openai_api_key');
-    }
-    
-    // 最后从应用配置获取
-    if (!apiKey && typeof window !== 'undefined') {
-      const configStr = localStorage.getItem('interview-assistant-config');
-      if (configStr) {
-        try {
-          const config = JSON.parse(configStr);
-          apiKey = config.openaiApiKey;
-        } catch (e) {
-          console.warn('解析应用配置失败:', e);
-        }
-      }
-    }
-    
-    if (!apiKey || apiKey.trim() === '') {
-      throw new Error('OpenAI API key not found. Please set it in Settings page or save it in localStorage as "openai_api_key".');
-    }
-    
-    return apiKey.trim();
-  }
 
   // 重置使用统计
   resetUsageStats(): void {
