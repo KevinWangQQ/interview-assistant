@@ -411,7 +411,7 @@ ${JSON.stringify(consolidatedAnalysis, null, 2)}
     
     try {
       // 获取API密钥
-      const apiKey = this.getAPIKey();
+      const apiKey = await this.getAPIKey();
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -456,11 +456,11 @@ ${JSON.stringify(consolidatedAnalysis, null, 2)}
   }
 
   // 🔑 获取API密钥 - 使用统一的API密钥管理器
-  private getAPIKey(): string {
+  private async getAPIKey(): Promise<string> {
     try {
       // 动态导入API密钥管理器（避免循环导入）
-      const { ApiKeyManager } = require('@/lib/api-key-manager');
-      const apiKeyManager = new ApiKeyManager();
+      const { ApiKeyManager } = await import('@/lib/api-key-manager');
+      const apiKeyManager = ApiKeyManager.getInstance();
       return apiKeyManager.getOpenAIApiKey();
     } catch (error) {
       console.error('❌ 获取API密钥失败:', error);

@@ -351,7 +351,7 @@ export class EnhancedInterviewStorageService {
       console.log('📤 导出会话:', sessionId, config.format);
       
       // 准备导出数据
-      let exportData: any = {
+      const exportData: any = {
         basicInfo: {
           candidateName: config.anonymize ? 
             config.anonymizationOptions?.replaceCandidateName || '候选人' : 
