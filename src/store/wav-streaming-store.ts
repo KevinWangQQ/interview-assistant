@@ -168,10 +168,10 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           console.log('📊 开始生成面试总结...');
           
           // 导入总结服务
-          const { GPT4SummaryService } = await import('@/services/interview-summary/gpt4-summary-service');
+          const { GPT4InterviewSummaryService } = await import('@/services/interview-summary/gpt4-summary-service');
           const { EnhancedInterviewStorageService } = await import('@/services/storage/enhanced-interview-storage');
           
-          const summaryService = new GPT4SummaryService();
+          const summaryService = new GPT4InterviewSummaryService();
           const storageService = new EnhancedInterviewStorageService();
           
           // 生成总结
@@ -180,16 +180,59 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           // 创建面试会话记录
           const interviewSession = {
             id: `interview-${Date.now()}`,
-            title: `面试记录 - ${new Date().toLocaleDateString()}`,
-            date: new Date(),
-            duration: 0, // TODO: 从录制时间计算
+            timestamp: new Date(),
+            lastUpdated: new Date(),
+            candidateName: '未指定候选人',
+            position: '未指定职位',
+            interviewerName: '面试官',
+            company: '',
+            recordingSession: {
+              id: `recording-${Date.now()}`,
+              startTime: new Date(),
+              endTime: new Date(),
+              duration: 0,
+              status: 'completed' as const,
+              audioConfig: {
+                microphoneEnabled: true,
+                systemAudioEnabled: false,
+                sampleRate: 16000,
+                channels: 1,
+                format: 'wav'
+              },
+              audioQualityHistory: [],
+              averageAudioQuality: 0.8
+            },
             segments: segments,
+            rawTranscriptionText: segments.map((seg: any) => seg.text).join(' '),
+            rawTranslationText: segments.map((seg: any) => seg.translation).join(' '),
             summary: summary,
-            metadata: {
+            statistics: {
               totalWords: segments.reduce((sum: number, seg: any) => sum + (seg.wordCount || 0), 0),
-              language: 'en-zh',
-              quality: 'high'
-            }
+              totalQuestions: 0,
+              speakerChangeCount: 0,
+              averageSegmentDuration: 0,
+              longestSegmentDuration: 0,
+              speakingTimeDistribution: {
+                interviewer: 0,
+                candidate: 0,
+                unknown: 0
+              },
+              interactionMetrics: {
+                responseTime: [],
+                questionDepth: 0,
+                engagementScore: 0
+              }
+            },
+            tags: [],
+            category: 'mixed' as const,
+            difficulty: 'mid' as const,
+            metadata: {
+              recordingQuality: 'high' as const,
+              processingVersion: '1.0.0'
+            },
+            status: 'completed' as const,
+            isBookmarked: false,
+            confidentialityLevel: 'internal' as const
           };
           
           // 保存到本地存储

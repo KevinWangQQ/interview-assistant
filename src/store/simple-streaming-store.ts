@@ -3,7 +3,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { SimpleStreamingTranscriptionService } from '@/services/streaming/simple-streaming-transcription';
+import { WAVStreamingTranscriptionService } from '@/services/streaming/wav-streaming-transcription';
 
 interface SimpleStreamingState {
   // 基础状态
@@ -13,7 +13,7 @@ interface SimpleStreamingState {
   currentTranslation: string;
   
   // 服务
-  streamingService: SimpleStreamingTranscriptionService | null;
+  streamingService: WAVStreamingTranscriptionService | null;
   
   // 错误处理
   error: string | null;
@@ -73,7 +73,7 @@ export const useSimpleStreamingStore = create<SimpleStreamingStore>()(
           const { config } = get();
           
           // 创建简化服务
-          const streamingService = new SimpleStreamingTranscriptionService({
+          const streamingService = new WAVStreamingTranscriptionService({
             chunkInterval: config.chunkInterval,
             translationDelay: config.translationDelay
           });

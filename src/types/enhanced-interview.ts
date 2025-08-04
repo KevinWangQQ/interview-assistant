@@ -99,6 +99,7 @@ export interface EnhancedInterviewSession {
     networkQuality?: 'excellent' | 'good' | 'fair' | 'poor';
     recordingQuality: 'high' | 'medium' | 'low';
     processingVersion: string;
+    archiveReason?: string;
   };
   
   // 状态管理

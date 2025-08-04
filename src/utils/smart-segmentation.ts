@@ -166,7 +166,13 @@ export class SmartSegmentationProcessor {
     silenceDetected: boolean = false
   ): {
     newSegment: TranscriptionSegment | null;
-    updatedBuffer: typeof this.currentBuffer;
+    updatedBuffer: {
+      text: string;
+      translation: string;
+      startTime: number;
+      lastUpdateTime: number;
+      sentences: string[];
+    };
   } {
     console.log('🔄 处理转录更新:', { newText: newText.substring(0, 50), currentTime });
     

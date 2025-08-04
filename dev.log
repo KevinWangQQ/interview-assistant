@@ -103,3 +103,169 @@ Import trace for requested module:
  GET / 200 in 65ms
  ✓ Compiled in 269ms (912 modules)
  GET / 200 in 62ms
+ ✓ Compiled in 288ms (409 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json',
+  page: '/'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1350ms (1240 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ GET / 500 in 3563ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json',
+  page: '/'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ GET / 500 in 397ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json',
+  page: '/'
+}
+ ✓ Compiled in 113ms (557 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ GET / 500 in 523ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json',
+  page: '/'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ GET / 500 in 467ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json',
+  page: '/'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ GET / 500 in 323ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json',
+  page: '/'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ GET / 500 in 346ms
+ ✓ Compiled in 185ms (557 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json',
+  page: '/'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 521ms (1231 modules)
+ GET / 500 in 715ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/07859e7ee782ec6e.webpack.hot-update.json 500 in 910ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'
+}
+ GET /_next/static/chunks/fallback/webpack.js 500 in 499ms
+ GET /_next/static/chunks/fallback/react-refresh.js 500 in 499ms
+ GET /_next/static/chunks/fallback/main.js 500 in 498ms
+ GET /_next/static/chunks/fallback/pages/_app.js 500 in 498ms
+ GET /_next/static/chunks/fallback/pages/_error.js 500 in 498ms
+ ✓ Compiled /favicon.ico in 118ms (701 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/routes-manifest.json',
+  page: '/favicon.ico'
+}
+ GET /favicon.ico 500 in 328ms
+ ✓ Compiled in 244ms (1262 modules)
+ ✓ Compiled in 187ms (1262 modules)
+ ✓ Compiled in 128ms (557 modules)
+ ✓ Compiled in 87ms (557 modules)
+ ✓ Compiled in 61ms (557 modules)
+ ✓ Compiled in 234ms (1240 modules)
+ ✓ Compiled in 116ms (1240 modules)
+ ✓ Compiled in 151ms (1240 modules)
+ ✓ Compiled in 187ms (1240 modules)

@@ -16,7 +16,7 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { useStreamingInterviewStore } from '@/store/streaming-interview-store';
+import { useInterviewStore } from '@/store/interview-store';
 import { getTranslationService } from '@/services';
 
 interface ApiSettingsProps {
@@ -30,7 +30,7 @@ export function ApiSettings({ className }: ApiSettingsProps) {
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const { config, updateConfig } = useStreamingInterviewStore();
+  const { config, updateConfig } = useInterviewStore();
 
   useEffect(() => {
     // 从localStorage或配置中加载API密钥

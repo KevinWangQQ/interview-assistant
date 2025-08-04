@@ -162,8 +162,10 @@ export class EnhancedWAVStreamingTranscriptionService {
                 echoCancellation: false,
                 noiseSuppression: false,
                 autoGainControl: false,
-                suppressLocalAudioPlayback: false // Chrome特有参数
-              },
+                ...(typeof (window as any).chrome !== 'undefined' && {
+                  suppressLocalAudioPlayback: false // Chrome特有参数
+                })
+              } as MediaTrackConstraints,
               video: false
             });
             systemAudioAvailable = true;
@@ -230,10 +232,12 @@ export class EnhancedWAVStreamingTranscriptionService {
               echoCancellation: false,
               noiseSuppression: false,
               autoGainControl: false,
-              suppressLocalAudioPlayback: false,
+              ...(typeof (window as any).chrome !== 'undefined' && {
+                suppressLocalAudioPlayback: false
+              }),
               sampleRate: 16000,
               channelCount: 1
-            },
+            } as MediaTrackConstraints,
             video: false
           });
           this.systemAudioSource.isActive = true;
