@@ -30,6 +30,7 @@ export function EnhancedInterviewMain() {
     error,
     startStreaming,
     stopStreaming,
+    generateSummaryAndSave,
     clearError
   } = useWAVStreamingStore();
 
@@ -92,9 +93,19 @@ export function EnhancedInterviewMain() {
       
       setCompletedSegments(allSegments);
       
-      // 开始异步生成面试总结
+      // 开始异步生成面试总结并保存到历史记录
       if (allSegments.length > 0) {
-        await generateInterviewSummary(allSegments);
+        try {
+          setIsGeneratingSummary(true);
+          console.log('🤖 开始生成并保存面试总结...');
+          const summaryResult = await generateSummaryAndSave();
+          setInterviewSummary(summaryResult);
+          console.log('✅ 面试总结生成并保存完成');
+        } catch (error) {
+          console.error('❌ 生成面试总结失败:', error);
+        } finally {
+          setIsGeneratingSummary(false);
+        }
       }
     } catch (error) {
       console.error('停止录制失败:', error);

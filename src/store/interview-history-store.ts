@@ -1,18 +1,21 @@
-// 面试历史记录Store - 简化版本
+// 面试历史记录Store - 使用增强版存储服务
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { InterviewSession } from '@/types';
+import { EnhancedInterviewSession } from '@/types/enhanced-interview';
+import { EnhancedInterviewStorageService } from '@/services/storage/enhanced-interview-storage';
 
 interface InterviewHistoryState {
-  sessions: InterviewSession[];
+  sessions: EnhancedInterviewSession[];
   isLoading: boolean;
   error: string | null;
+  storageService: EnhancedInterviewStorageService;
 }
 
 interface InterviewHistoryActions {
   loadSessions: () => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
+  exportSession: (sessionId: string, format: 'json' | 'txt' | 'csv') => Promise<void>;
   clearError: () => void;
 }
 
@@ -21,7 +24,8 @@ type InterviewHistoryStore = InterviewHistoryState & InterviewHistoryActions;
 const initialState: InterviewHistoryState = {
   sessions: [],
   isLoading: false,
-  error: null
+  error: null,
+  storageService: new EnhancedInterviewStorageService()
 };
 
 export const useInterviewHistoryStore = create<InterviewHistoryStore>()(
@@ -33,13 +37,13 @@ export const useInterviewHistoryStore = create<InterviewHistoryStore>()(
         try {
           set({ isLoading: true, error: null });
           
-          // 从localStorage加载历史记录
-          const stored = localStorage.getItem('interview-sessions');
-          const sessions = stored ? JSON.parse(stored) : [];
+          const { storageService } = get();
+          const sessions = storageService.getAllSessions();
           
+          console.log('✅ 加载面试历史记录:', sessions.length);
           set({ sessions, isLoading: false });
         } catch (error) {
-          console.error('加载面试历史失败:', error);
+          console.error('❌ 加载面试历史失败:', error);
           set({ 
             error: '加载历史记录失败', 
             isLoading: false 
@@ -49,16 +53,49 @@ export const useInterviewHistoryStore = create<InterviewHistoryStore>()(
 
       deleteSession: async (sessionId: string) => {
         try {
-          const { sessions } = get();
-          const updatedSessions = sessions.filter(s => s.id !== sessionId);
+          const { storageService } = get();
+          const success = await storageService.deleteSession(sessionId);
           
-          // 更新localStorage
-          localStorage.setItem('interview-sessions', JSON.stringify(updatedSessions));
-          
-          set({ sessions: updatedSessions });
+          if (success) {
+            const sessions = storageService.getAllSessions();
+            set({ sessions });
+            console.log('✅ 面试记录删除成功');
+          } else {
+            set({ error: '删除记录失败：记录不存在' });
+          }
         } catch (error) {
-          console.error('删除面试记录失败:', error);
+          console.error('❌ 删除面试记录失败:', error);
           set({ error: '删除记录失败' });
+        }
+      },
+
+      exportSession: async (sessionId: string, format: 'json' | 'txt' | 'csv') => {
+        try {
+          const { storageService } = get();
+          const exportResult = await storageService.exportSession(sessionId, {
+            format,
+            includeSegments: true,
+            includeSummary: true,
+            includeStatistics: true,
+            includeAudioMetrics: false,
+            anonymize: false
+          });
+
+          // 创建下载链接
+          const blob = new Blob([exportResult.data], { type: exportResult.mimeType });
+          const url = URL.createObjectURL(blob);
+          
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = exportResult.filename;
+          link.click();
+          
+          URL.revokeObjectURL(url);
+          
+          console.log('✅ 面试记录导出成功:', exportResult.filename);
+        } catch (error) {
+          console.error('❌ 导出面试记录失败:', error);
+          set({ error: '导出记录失败' });
         }
       },
 

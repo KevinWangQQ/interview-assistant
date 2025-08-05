@@ -273,3 +273,138 @@ Import trace for requested module:
  ✓ Compiled in 133ms (1240 modules)
  ✓ Compiled in 118ms (1240 modules)
  ✓ Compiled in 196ms (1240 modules)
+ ✓ Compiled in 1228ms (1240 modules)
+ ✓ Compiled in 331ms (1240 modules)
+ ✓ Compiled in 140ms (1240 modules)
+ ✓ Compiled in 141ms (1240 modules)
+ ✓ Compiled in 131ms (1240 modules)
+ ✓ Compiled in 139ms (1240 modules)
+ ✓ Compiled in 153ms (1240 modules)
+ ✓ Compiled in 145ms (1240 modules)
+ ✓ Compiled in 146ms (1240 modules)
+ ✓ Compiled in 137ms (1240 modules)
+ ✓ Compiled in 134ms (1240 modules)
+ ✓ Compiled in 119ms (1240 modules)
+ ✓ Compiled in 155ms (1240 modules)
+ ✓ Compiled in 125ms (1240 modules)
+ ✓ Compiled in 118ms (1240 modules)
+ ✓ Compiled in 149ms (1240 modules)
+ ⨯ ./src/components/interview/interview-history.tsx
+Error:   [31mx[0m Expected ',', got 'className'
+     ,-[[36;1;4m/Users/kevin/Work/Code/Interview Agent/interview-assistant/src/components/interview/interview-history.tsx[0m:264:1]
+ [2m261[0m |         </div>
+ [2m262[0m |       </div>
+ [2m263[0m | 
+ [2m264[0m |       <div className="space-y-2">
+     : [35;1m           ^^^^^^^^^[0m
+ [2m265[0m |         <div className="flex items-center gap-2 text-base font-medium">
+ [2m266[0m |           <User className="h-4 w-4 text-blue-500" />
+ [2m267[0m |           <span>{session.candidateName}</span>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/interview/interview-history.tsx
+./src/app/page.tsx
+ ⨯ ./src/components/interview/interview-history.tsx
+Error:   [31mx[0m Unterminated regexp literal
+     ,-[[36;1;4m/Users/kevin/Work/Code/Interview Agent/interview-assistant/src/components/interview/interview-history.tsx[0m:263:1]
+ [2m260[0m |           </Button>
+ [2m261[0m |         </div>
+ [2m262[0m |       </div>
+ [2m263[0m |       </div>
+     : [35;1m       ^^^^^[0m
+ [2m264[0m | 
+ [2m265[0m |       <div className="space-y-2">
+ [2m266[0m |         <div className="flex items-center gap-2 text-base font-medium">
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/interview/interview-history.tsx
+./src/app/page.tsx
+ ⨯ ./src/components/interview/interview-history.tsx:22:1
+Module not found: Can't resolve '@/components/ui/dropdown-menu'
+  20 |   ChevronDown
+  21 | } from 'lucide-react';
+> 22 | import {
+     | ^
+  23 |   DropdownMenu,
+  24 |   DropdownMenuContent,
+  25 |   DropdownMenuItem,
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./src/app/page.tsx
+ ✓ Compiled in 309ms (1242 modules)
+ ✓ Compiled in 135ms (1240 modules)
+❌ 配置加载失败: ReferenceError: localStorage is not defined
+    at d.loadConfiguration (.next/server/app/page.js:2:8499)
+    at new d (.next/server/app/page.js:2:8182)
+    at 9316 (.next/server/app/page.js:27:1162)
+❌ 获取所有会话失败: ReferenceError: localStorage is not defined
+    at d.getAllSessions (.next/server/app/page.js:2:9501)
+    at d.initializeStorage (.next/server/app/page.js:2:8262)
+    at new d (.next/server/app/page.js:2:8207)
+    at 9316 (.next/server/app/page.js:27:1162)
+💾 初始化增强版存储服务: { sessionsCount: 0, storageSize: 0 }
+🧹 执行自动清理...
+❌ 获取所有会话失败: ReferenceError: localStorage is not defined
+    at d.getAllSessions (.next/server/app/page.js:2:9501)
+    at d.performAutoCleanup (.next/server/app/page.js:2:14876)
+    at d.initializeStorage (.next/server/app/page.js:2:8408)
+    at new d (.next/server/app/page.js:2:8207)
+    at 9316 (.next/server/app/page.js:27:1162)
+ GET / 200 in 547ms
+ ✓ Compiled /favicon.ico in 192ms (700 modules)
+ GET /favicon.ico 200 in 351ms
+ ⨯ Error: Cannot find module './985.js'
+Require stack:
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/server/webpack-runtime.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/server/app/favicon.ico/route.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/require.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/load-components.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/build/utils.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/build/swc/options.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/build/swc/index.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/config.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/next.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/lib/start-server.js
+    at <unknown> (.next/server/app/page.js:27:48224)
+    at Object.<anonymous> (.next/server/app/page.js:27:48273) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/'
+}
+ ⨯ Error: Cannot find module './548.js'
+Require stack:
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/server/webpack-runtime.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/.next/server/app/favicon.ico/route.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/require.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/load-components.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/build/utils.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/build/swc/options.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/build/swc/index.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/build/next-config-ts/transpile-config.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/config.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/next.js
+- /Users/kevin/Work/Code/Interview Agent/interview-assistant/node_modules/next/dist/server/lib/start-server.js
+    at <unknown> (.next/server/pages/_document.js:1:321)
+    at Object.<anonymous> (.next/server/pages/_document.js:1:366) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ GET / 500 in 60ms
+ ✓ Compiled /_not-found in 203ms (1248 modules)
+ GET /_next/static/chunks/fallback/webpack.js 404 in 381ms
+ GET /_next/static/chunks/fallback/main.js 404 in 381ms
+ GET /_next/static/chunks/fallback/pages/_app.js 404 in 380ms
+ GET /_next/static/chunks/fallback/react-refresh.js 404 in 381ms
+ GET /_next/static/chunks/fallback/pages/_error.js 404 in 381ms
+ GET /favicon.ico 200 in 9ms

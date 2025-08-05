@@ -16,21 +16,22 @@ import {
   User,
   Briefcase,
   FileText,
-  Download
+  Download,
+  ChevronDown
 } from 'lucide-react';
 import { useInterviewHistoryStore } from '@/store/interview-history-store';
-import { InterviewSession } from '@/types';
+import { EnhancedInterviewSession } from '@/types/enhanced-interview';
 
 interface InterviewHistoryProps {
   className?: string;
-  onViewInterview?: (interview: InterviewSession) => void;
+  onViewInterview?: (interview: EnhancedInterviewSession) => void;
 }
 
 export function InterviewHistory({ className, onViewInterview }: InterviewHistoryProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedInterview, setSelectedInterview] = useState<InterviewSession | null>(null);
+  const [selectedInterview, setSelectedInterview] = useState<EnhancedInterviewSession | null>(null);
   
-  const { sessions, loadSessions, deleteSession } = useInterviewHistoryStore();
+  const { sessions, loadSessions, deleteSession, exportSession } = useInterviewHistoryStore();
 
   useEffect(() => {
     loadSessions();
@@ -38,7 +39,8 @@ export function InterviewHistory({ className, onViewInterview }: InterviewHistor
 
   const filteredSessions = sessions.filter(session =>
     session.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    session.position.toLowerCase().includes(searchQuery.toLowerCase())
+    session.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (session.company && session.company.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const formatDate = (date: Date | string) => {
@@ -52,23 +54,22 @@ export function InterviewHistory({ className, onViewInterview }: InterviewHistor
     });
   };
 
-  const formatDuration = (start: Date | string, end?: Date | string) => {
-    if (!end) return '进行中';
+  const formatDuration = (session: EnhancedInterviewSession) => {
+    const duration = session.recordingSession.duration;
+    if (!duration) return '未知时长';
     
-    const startTime = new Date(start).getTime();
-    const endTime = new Date(end).getTime();
-    const duration = endTime - startTime;
-    
-    const minutes = Math.floor(duration / (1000 * 60));
-    const seconds = Math.floor((duration % (1000 * 60)) / 1000);
+    const minutes = Math.floor(duration / 60);
+    const seconds = Math.floor(duration % 60);
     
     return `${minutes}分${seconds}秒`;
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (session: EnhancedInterviewSession) => {
+    const status = session.recordingSession.status;
     const statusConfig = {
       recording: { variant: 'default' as const, label: '录制中', className: 'bg-green-500' },
       paused: { variant: 'secondary' as const, label: '已暂停', className: '' },
+      stopped: { variant: 'outline' as const, label: '已停止', className: '' },
       completed: { variant: 'outline' as const, label: '已完成', className: '' }
     };
     
@@ -89,39 +90,19 @@ export function InterviewHistory({ className, onViewInterview }: InterviewHistor
     }
   };
 
-  const handleViewInterview = (interview: InterviewSession) => {
+  const handleViewInterview = (interview: EnhancedInterviewSession) => {
     setSelectedInterview(interview);
     onViewInterview?.(interview);
   };
 
-  const exportInterview = (interview: InterviewSession, event: React.MouseEvent) => {
+  const exportInterview = async (interview: EnhancedInterviewSession, format: 'json' | 'txt' | 'csv', event: React.MouseEvent) => {
     event.stopPropagation();
     
-    const exportData = {
-      candidate: interview.candidateName,
-      position: interview.position,
-      startTime: interview.startTime,
-      endTime: interview.endTime,
-      status: interview.status,
-      segments: interview.segments.map(segment => ({
-        timestamp: new Date(segment.timestamp).toLocaleTimeString(),
-        speaker: segment.speaker === 'interviewer' ? '面试官' : '候选人',
-        originalText: segment.originalText,
-        translatedText: segment.translatedText
-      })),
-      summary: interview.summary
-    };
-
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `面试记录_${interview.candidateName}_${interview.position}_${new Date(interview.startTime).toISOString().split('T')[0]}.json`;
-    link.click();
-    
-    URL.revokeObjectURL(url);
+    try {
+      await exportSession(interview.id, format);
+    } catch (error) {
+      console.error('导出失败:', error);
+    }
   };
 
   return (
@@ -180,7 +161,7 @@ export function InterviewHistory({ className, onViewInterview }: InterviewHistor
                   isSelected={selectedInterview?.id === session.id}
                   onView={() => handleViewInterview(session)}
                   onDelete={(e) => handleDeleteInterview(session.id, e)}
-                  onExport={(e) => exportInterview(session, e)}
+                  onExport={(format, e) => exportInterview(session, format, e)}
                   formatDate={formatDate}
                   formatDuration={formatDuration}
                   getStatusBadge={getStatusBadge}
@@ -195,14 +176,14 @@ export function InterviewHistory({ className, onViewInterview }: InterviewHistor
 }
 
 interface InterviewCardProps {
-  session: InterviewSession;
+  session: EnhancedInterviewSession;
   isSelected: boolean;
   onView: () => void;
   onDelete: (event: React.MouseEvent) => void;
-  onExport: (event: React.MouseEvent) => void;
+  onExport: (format: 'json' | 'txt' | 'csv', event: React.MouseEvent) => void;
   formatDate: (date: Date | string) => string;
-  formatDuration: (start: Date | string, end?: Date | string) => string;
-  getStatusBadge: (status: string) => React.ReactNode;
+  formatDuration: (session: EnhancedInterviewSession) => string;
+  getStatusBadge: (session: EnhancedInterviewSession) => React.ReactNode;
 }
 
 function InterviewCard({
@@ -224,9 +205,9 @@ function InterviewCard({
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          {getStatusBadge(session.status)}
+          {getStatusBadge(session)}
           <span className="text-sm text-muted-foreground">
-            {formatDate(session.startTime)}
+            {formatDate(session.timestamp)}
           </span>
         </div>
         
@@ -234,8 +215,8 @@ function InterviewCard({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onExport}
-            title="导出记录"
+            onClick={(e) => onExport('json', e)}
+            title="导出为 JSON"
           >
             <Download className="h-4 w-4" />
           </Button>
@@ -268,23 +249,24 @@ function InterviewCard({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Briefcase className="h-4 w-4" />
           <span>{session.position}</span>
+          {session.company && (
+            <>
+              <span>·</span>
+              <span>{session.company}</span>
+            </>
+          )}
         </div>
         
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
-            <span>{formatDuration(session.startTime, session.endTime)}</span>
-          </div>
-          
-          <div className="flex items-center gap-1">
-            <FileText className="h-4 w-4" />
-            <span>{session.segments.length} 个片段</span>
+            <span>{formatDuration(session)}</span>
           </div>
         </div>
 
         {session.summary && (
           <div className="mt-3 p-2 bg-muted/30 rounded text-sm">
-            <p className="line-clamp-2">{session.summary.content}</p>
+            <p className="line-clamp-2">{session.summary.executiveSummary}</p>
           </div>
         )}
       </div>

@@ -3,15 +3,39 @@
 import { useEffect, useState } from 'react';
 import { InterviewHistory } from '@/components/interview/interview-history';
 import { InterviewSettings } from '@/components/interview/interview-settings';
+import { InterviewDetailView } from '@/components/interview/interview-detail-view';
 import { StreamingErrorBoundary } from '@/components/streaming/streaming-error-boundary';
 import { EnhancedInterviewMain } from '@/components/interview/enhanced-interview-main';
 import { useWAVStreamingStore } from '@/store/wav-streaming-store';
+import { useInterviewHistoryStore } from '@/store/interview-history-store';
+import { EnhancedInterviewSession } from '@/types/enhanced-interview';
 import { Mic, History, Settings } from 'lucide-react';
 
-type ViewType = 'interview' | 'history' | 'settings';
+type ViewType = 'interview' | 'history' | 'settings' | 'interview-detail';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>('interview');
+  const [selectedInterview, setSelectedInterview] = useState<EnhancedInterviewSession | null>(null);
+  const { loadSessions } = useInterviewHistoryStore();
+
+  const handleViewInterview = (interview: EnhancedInterviewSession) => {
+    setSelectedInterview(interview);
+    setCurrentView('interview-detail');
+  };
+
+  const handleBackToHistory = () => {
+    setSelectedInterview(null);
+    setCurrentView('history');
+    // 刷新历史记录
+    loadSessions();
+  };
+
+  // 当切换到历史页面时，刷新数据
+  useEffect(() => {
+    if (currentView === 'history') {
+      loadSessions();
+    }
+  }, [currentView, loadSessions]);
 
   const renderCurrentView = () => {
     switch (currentView) {
@@ -21,7 +45,22 @@ export default function Home() {
       case 'history':
         return (
           <div className="max-w-4xl mx-auto">
-            <InterviewHistory />
+            <InterviewHistory 
+              key="history-view" 
+              onViewInterview={handleViewInterview} 
+            />
+          </div>
+        );
+      
+      case 'interview-detail':
+        return selectedInterview ? (
+          <InterviewDetailView 
+            interview={selectedInterview} 
+            onBack={handleBackToHistory}
+          />
+        ) : (
+          <div className="max-w-4xl mx-auto">
+            <InterviewHistory onViewInterview={handleViewInterview} />
           </div>
         );
       
