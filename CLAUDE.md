@@ -29,6 +29,48 @@ npm run start
 npm run lint
 ```
 
+### Service Restart Best Practices (经验总结)
+
+**关键点：清理进程是服务重启成功的核心**
+
+1. **完整清理序列** (必须按顺序执行)：
+   ```bash
+   # 一行命令清理所有端口和进程 (推荐)
+   lsof -ti:3000 | xargs kill -9 2>/dev/null; lsof -ti:3001 | xargs kill -9 2>/dev/null; pkill -f "next dev" 2>/dev/null
+   ```
+
+2. **后台启动方式** (避免超时)：
+   ```bash
+   # 后台启动并记录日志
+   nohup npm run dev > dev.log 2>&1 &
+   
+   # 等待启动完成后验证
+   sleep 5 && curl -I http://localhost:3000
+   ```
+
+3. **验证服务状态**：
+   ```bash
+   # 检查HTTP响应
+   curl -I http://localhost:3000
+   
+   # 检查端口占用
+   lsof -i :3000
+   
+   # 检查进程状态
+   ps aux | grep "next dev" | grep -v grep
+   ```
+
+4. **故障排查步骤**：
+   - 如果curl连接失败：检查进程是否真正启动
+   - 如果超时：使用nohup后台启动
+   - 查看日志：`tail -f dev.log` 实时监控启动过程
+   - 检查代码错误：关注SSR相关错误（如localStorage问题）
+
+**常见问题解决**：
+- **端口占用**: 重复清理命令直到成功
+- **服务启动超时**: 使用后台启动方式
+- **SSR错误**: localStorage等浏览器API在服务端渲染时会报错，需要条件判断
+
 ### Debugging Commands
 
 ```bash
@@ -134,6 +176,12 @@ The enhanced streaming service combines:
 - Implement storage limits and auto-cleanup
 - Support incremental saves during long interviews
 - Provide comprehensive export options
+
+### SSR (Server-Side Rendering) 兼容性
+- **localStorage问题**: localStorage只在客户端可用，服务端渲染时会抛出ReferenceError
+- **解决方案**: 使用条件检查 `typeof window !== 'undefined'` 或 `typeof localStorage !== 'undefined'`
+- **影响组件**: 所有使用localStorage的存储服务需要客户端检查
+- **常见错误**: `ReferenceError: localStorage is not defined` 在SSR时出现
 
 ## Component Architecture
 
