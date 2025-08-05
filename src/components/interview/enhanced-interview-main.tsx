@@ -4,13 +4,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   AlertCircle, 
   Mic, 
   Loader, 
   Square,
-  Clock
+  Clock,
+  User,
+  Briefcase
 } from 'lucide-react';
 import { useWAVStreamingStore } from '@/store/wav-streaming-store';
 
@@ -19,6 +23,8 @@ export function EnhancedInterviewMain() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [interviewSummary, setInterviewSummary] = useState<any>(null);
   const [completedSegments, setCompletedSegments] = useState<any[]>([]);
+  const [candidateName, setCandidateName] = useState('');
+  const [position, setPosition] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -65,7 +71,14 @@ export function EnhancedInterviewMain() {
       setCompletedSegments([]);
       setInterviewSummary(null);
       setIsGeneratingSummary(false);
-      await startStreaming();
+      
+      // 传递面试信息到store
+      const interviewInfo = {
+        candidateName: candidateName.trim() || 'unknown',
+        position: position.trim() || '未指定岗位'
+      };
+      
+      await startStreaming(interviewInfo);
     } catch (error) {
       console.error('启动录制失败:', error);
     }
@@ -129,6 +142,9 @@ export function EnhancedInterviewMain() {
         totalWords: segments.reduce((sum: number, seg: any) => sum + (seg.wordCount || 0), 0),
         questionCount: segments.filter((seg: any) => seg.englishText.includes('?')).length,
         interactionCount: segments.length
+      }, {
+        candidateName: candidateName.trim() || 'unknown',
+        position: position.trim() || '未指定岗位'
       });
       
       setInterviewSummary(summary);
@@ -158,59 +174,113 @@ export function EnhancedInterviewMain() {
 
       {/* 简化的控制面板 */}
       <div className="bg-white shadow-sm border-b p-4 flex-shrink-0">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <div>
-            <h2 className="text-lg font-semibold">面试转录</h2>
-            {isActive && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span className="font-mono">{formatTime(recordingTime)}</span>
-                {isProcessing && (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin ml-2" />
-                    <span>处理中</span>
-                  </>
-                )}
+        <div className="max-w-4xl mx-auto">
+          {/* 面试信息输入区域 */}
+          {!isActive && completedSegments.length === 0 && (
+            <div className="mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="space-y-2">
+                  <Label htmlFor="candidateName" className="flex items-center gap-2 text-sm font-medium">
+                    <User className="h-4 w-4" />
+                    应聘人姓名
+                  </Label>
+                  <Input
+                    id="candidateName"
+                    type="text"
+                    placeholder="可留空，默认为 unknown"
+                    value={candidateName}
+                    onChange={(e) => setCandidateName(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="position" className="flex items-center gap-2 text-sm font-medium">
+                    <Briefcase className="h-4 w-4" />
+                    面试岗位
+                  </Label>
+                  <Input
+                    id="position"
+                    type="text"
+                    placeholder="可留空"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
           
-          <div className="flex items-center gap-3">
-            {!isActive && completedSegments.length === 0 ? (
-              <Button 
-                onClick={handleStartRecording} 
-                size="lg"
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Mic className="w-5 h-5 mr-2" />
-                开始录制
-              </Button>
-            ) : !isActive && completedSegments.length > 0 ? (
-              <Button 
-                onClick={handleStartRecording} 
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Mic className="w-5 h-5 mr-2" />
-                开始新面试
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleStopRecording}
-                size="lg"
-                variant="destructive"
-              >
-                <Square className="w-5 h-5 mr-2" />
-                结束录制
-              </Button>
-            )}
-            
-            {isGeneratingSummary && (
-              <div className="flex items-center gap-2 text-orange-600">
-                <Loader className="w-4 h-4 animate-spin" />
-                <span className="text-sm">正在生成面试总结...</span>
-              </div>
-            )}
+          {/* 面试状态和控制区域 */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">面试转录</h2>
+              {/* 显示当前面试信息 */}
+              {(isActive || completedSegments.length > 0) && (
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                  <span className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {candidateName || 'unknown'}
+                  </span>
+                  {position && (
+                    <span className="flex items-center gap-1">
+                      <Briefcase className="h-3 w-3" />
+                      {position}
+                    </span>
+                  )}
+                </div>
+              )}
+              {isActive && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                  <Clock className="h-4 w-4" />
+                  <span className="font-mono">{formatTime(recordingTime)}</span>
+                  {isProcessing && (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin ml-2" />
+                      <span>处理中</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          
+            <div className="flex items-center gap-3">
+              {!isActive && completedSegments.length === 0 ? (
+                <Button 
+                  onClick={handleStartRecording} 
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Mic className="w-5 h-5 mr-2" />
+                  开始面试
+                </Button>
+              ) : !isActive && completedSegments.length > 0 ? (
+                <Button 
+                  onClick={handleStartRecording} 
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Mic className="w-5 h-5 mr-2" />
+                  开始新面试
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleStopRecording}
+                  size="lg"
+                  variant="destructive"
+                >
+                  <Square className="w-5 h-5 mr-2" />
+                  结束面试
+                </Button>
+              )}
+              
+              {isGeneratingSummary && (
+                <div className="flex items-center gap-2 text-orange-600">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">正在生成面试总结...</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -333,7 +403,7 @@ export function EnhancedInterviewMain() {
                   准备开始面试转录
                 </h3>
                 <p className="text-gray-500 mb-6">
-                  点击"开始录制"按钮开始实时语音转录和翻译
+                  点击"开始面试"按钮开始实时语音转录和翻译
                 </p>
                 <div className="text-sm text-gray-400 space-y-1">
                   <p>• 支持英文语音实时转录</p>

@@ -13,6 +13,10 @@ interface WAVStreamingState {
   streamingService: EnhancedWAVStreamingTranscriptionService | null;
   error: string | null;
   lastSavedTimestamp: number | null;
+  interviewInfo: {
+    candidateName: string;
+    position: string;
+  } | null;
   config: {
     chunkInterval: number;
     translationDelay: number;
@@ -20,7 +24,7 @@ interface WAVStreamingState {
 }
 
 interface WAVStreamingActions {
-  startStreaming: () => Promise<void>;
+  startStreaming: (interviewInfo?: { candidateName: string; position: string }) => Promise<void>;
   stopStreaming: () => Promise<void>;
   generateSummaryAndSave: () => Promise<any>;
   saveInterviewSession: () => Promise<void>;
@@ -44,6 +48,7 @@ const initialState: WAVStreamingState = {
   streamingService: null,
   error: null,
   lastSavedTimestamp: null,
+  interviewInfo: null,
   config: {
     chunkInterval: 3000,
     translationDelay: 1000
@@ -55,11 +60,14 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
     (set, get) => ({
       ...initialState,
 
-      startStreaming: async () => {
+      startStreaming: async (interviewInfo?: { candidateName: string; position: string }) => {
         try {
-          console.log('🎵 启动WAV流式处理');
+          console.log('🎵 启动WAV流式处理', interviewInfo);
           
           const { config } = get();
+          
+          // 保存面试信息
+          set({ interviewInfo });
           
           const streamingService = new EnhancedWAVStreamingTranscriptionService({
             chunkInterval: config.chunkInterval,
@@ -192,23 +200,11 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           const { EnhancedInterviewStorageService } = await import('@/services/storage/enhanced-interview-storage');
           const storageService = new EnhancedInterviewStorageService();
           
-          // 尝试从 interview store 获取候选人信息
-          let candidateName = '未指定候选人';
-          let position = '未指定职位';
+          // 使用保存的面试信息
+          const { interviewInfo } = get();
+          const candidateName = interviewInfo?.candidateName || 'unknown';
+          const position = interviewInfo?.position || '未指定职位';
           const company = '';
-          
-          try {
-            // 动态导入 interview store 来获取候选人信息
-            const { useInterviewStore } = await import('@/store/interview-store');
-            const interviewStore = useInterviewStore.getState();
-            if (interviewStore.currentSession) {
-              candidateName = interviewStore.currentSession.candidateName || candidateName;
-              position = interviewStore.currentSession.position || position;
-              // 注意：InterviewSession 类型中没有 company 字段，使用默认值
-            }
-          } catch (error) {
-            console.warn('⚠️ 无法获取候选人信息，使用默认值');
-          }
           
           // 创建基础面试会话记录（不包含总结）
           const interviewSession = {
@@ -312,7 +308,7 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
 
       generateSummaryAndSave: async () => {
         try {
-          const { segments } = get();
+          const { segments, interviewInfo } = get();
           if (segments.length === 0) return;
 
           console.log('📊 开始生成面试总结...');
@@ -324,16 +320,20 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           const summaryService = new GPT4InterviewSummaryService();
           const storageService = new EnhancedInterviewStorageService();
           
-          // 生成总结
-          const summary = await summaryService.generateInterviewSummary(segments);
+          // 生成总结（传入面试信息）
+          const summary = await summaryService.generateInterviewSummary(
+            segments, 
+            undefined, 
+            interviewInfo || undefined
+          );
           
           // 创建面试会话记录
           const interviewSession = {
             id: `interview-${Date.now()}`,
             timestamp: new Date(),
             lastUpdated: new Date(),
-            candidateName: '未指定候选人',
-            position: '未指定职位',
+            candidateName: interviewInfo?.candidateName || 'unknown',
+            position: interviewInfo?.position || '未指定职位',
             interviewerName: '面试官',
             company: '',
             recordingSession: {

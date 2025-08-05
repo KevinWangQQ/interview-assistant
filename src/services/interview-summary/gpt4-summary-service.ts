@@ -94,7 +94,8 @@ export class GPT4InterviewSummaryService {
   // 🎯 生成面试总结的主要方法
   async generateInterviewSummary(
     segments: TranscriptionSegment[],
-    metadata?: Partial<InterviewMetadata>
+    metadata?: Partial<InterviewMetadata>,
+    interviewInfo?: { candidateName: string; position: string }
   ): Promise<InterviewSummary> {
     console.log('🤖 开始生成GPT-4面试总结');
     
@@ -122,7 +123,8 @@ export class GPT4InterviewSummaryService {
       const finalSummary = await this.generateComprehensiveSummary(
         chunkAnalyses,
         interviewData,
-        chunks
+        chunks,
+        interviewInfo
       );
       
       const processingTime = Date.now() - startTime;
@@ -310,7 +312,8 @@ ${chunk.content}
   private async generateComprehensiveSummary(
     chunkAnalyses: any[],
     interviewData: any,
-    chunks: TextChunk[]
+    chunks: TextChunk[],
+    interviewInfo?: { candidateName: string; position: string }
   ) {
     console.log('🔄 生成综合总结...');
     
@@ -321,7 +324,8 @@ ${chunk.content}
     const prompt = this.buildComprehensiveSummaryPrompt(
       consolidatedAnalysis,
       interviewData.metadata,
-      chunks
+      chunks,
+      interviewInfo
     );
     
     try {
@@ -337,9 +341,16 @@ ${chunk.content}
   private buildComprehensiveSummaryPrompt(
     consolidatedAnalysis: any,
     metadata: InterviewMetadata,
-    chunks: TextChunk[]
+    chunks: TextChunk[],
+    interviewInfo?: { candidateName: string; position: string }
   ): string {
+    const candidateInfo = interviewInfo ? `
+应聘人信息：
+- 姓名：${interviewInfo.candidateName}
+- 应聘岗位：${interviewInfo.position}` : '';
+
     return `你是资深的HR面试专家。基于以下面试分析数据，生成完整的面试评估报告。
+${candidateInfo}
 
 面试基本信息：
 - 时长：${metadata.duration}分钟
