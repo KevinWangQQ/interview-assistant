@@ -21,6 +21,10 @@ export function InterviewMain() {
     clearError
   } = useWAVStreamingStore();
 
+  const handleStartStreaming = () => {
+    startStreaming();
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* 错误提示 */}
@@ -55,7 +59,7 @@ export function InterviewMain() {
 
         <div className="flex gap-4">
           {!isActive ? (
-            <Button onClick={startStreaming} size="lg">
+            <Button onClick={handleStartStreaming} size="lg">
               <Mic className="w-4 h-4 mr-2" />
               开始录音
             </Button>
