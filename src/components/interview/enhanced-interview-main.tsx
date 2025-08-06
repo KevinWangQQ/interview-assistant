@@ -110,9 +110,7 @@ export function EnhancedInterviewMain() {
 
   const handleStopRecording = async () => {
     try {
-      await stopStreaming();
-      
-      // 保存当前会话的所有分段到完成状态
+      // 先保存当前会话的所有分段到完成状态
       const allSegments = [...storeSegments];
       if (currentText && currentTranslation) {
         // 如果还有未分段的内容，创建最后一个分段
@@ -129,6 +127,9 @@ export function EnhancedInterviewMain() {
       }
       
       setCompletedSegments(allSegments);
+      
+      // 停止流式处理
+      await stopStreaming();
       
       // 开始异步生成面试总结并保存到历史记录
       if (allSegments.length > 0) {
@@ -433,7 +434,7 @@ export function EnhancedInterviewMain() {
             </div>
             
             {/* 显示当前进行中的转录 - 连续文本显示 */}
-            {(currentText || currentTranslation) && (
+            {isActive && (currentText || currentTranslation) && (
               <div className="space-y-2 bg-amber-50/50 p-4 rounded-lg border border-amber-200">
                 {/* 实时状态指示 */}
                 <div className="flex items-center gap-2 text-xs text-amber-700">

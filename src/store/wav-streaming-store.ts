@@ -169,9 +169,9 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
             isProcessing: false,
             currentText: '',
             currentTranslation: '',
+            segments: [], // 清空实时segments，避免显示问题
             completedSegments: allSegments, // 保存完成的段落到store
             error: null
-            // 注意：不清空 segments，保留转录数据供后续使用
           });
           
           console.log('✅ WAV流式处理已停止');
