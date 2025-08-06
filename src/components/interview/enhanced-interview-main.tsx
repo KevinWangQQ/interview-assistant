@@ -396,97 +396,68 @@ export function EnhancedInterviewMain() {
               </div>
             )}
             
-            {/* 显示已完成的分段 - 优化突出显示 */}
-            {(isActive ? storeSegments : completedSegments).map((segment: any) => (
-              <div key={segment.id} className="bg-white rounded-xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(segment.timestamp).toLocaleTimeString()}
-                  </div>
-                  {segment.speaker && (
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      segment.speaker === 'interviewer' 
-                        ? 'bg-purple-100 text-purple-700' 
-                        : 'bg-green-100 text-green-700'
-                    }`}>
-                      {segment.speaker === 'interviewer' ? '面试官' : '候选人'}
-                    </span>
-                  )}
-                </div>
-                
-                <div className="space-y-4">
-                  {/* 英文原声文本 - 突出显示 */}
-                  <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs font-medium text-blue-700 uppercase tracking-wider">
-                        英文原声
+            {/* 显示已完成的分段 - 连续文本显示 */}
+            <div className="space-y-6">
+              {(isActive ? storeSegments : completedSegments).map((segment: any, index: number) => (
+                <div key={segment.id} className="space-y-2">
+                  {/* 时间戳和说话人标识 - 简洁显示 */}
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>{new Date(segment.timestamp).toLocaleTimeString()}</span>
+                    {segment.speaker && (
+                      <span className={`px-2 py-0.5 rounded text-xs ${
+                        segment.speaker === 'interviewer' 
+                          ? 'bg-purple-100 text-purple-600' 
+                          : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        {segment.speaker === 'interviewer' ? '面试官' : '候选人'}
                       </span>
-                    </div>
-                    <div className="text-gray-900 font-medium text-lg leading-relaxed">
-                      {segment.englishText}
-                    </div>
+                    )}
                   </div>
                   
-                  {/* 中文翻译 - 突出显示 */}
-                  <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-400">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs font-medium text-green-700 uppercase tracking-wider">
-                        中文翻译
-                      </span>
-                    </div>
-                    <div className="text-gray-800 text-lg leading-relaxed">
-                      {segment.chineseText}
-                    </div>
+                  {/* 英文原文 */}
+                  <div className="text-gray-900 text-base leading-relaxed font-medium">
+                    {segment.englishText}
                   </div>
+                  
+                  {/* 中文翻译 */}
+                  <div className="text-gray-700 text-base leading-relaxed pl-4 border-l-2 border-gray-200">
+                    {segment.chineseText}
+                  </div>
+                  
+                  {/* 分段间隔 */}
+                  {index < (isActive ? storeSegments : completedSegments).length - 1 && (
+                    <div className="h-4"></div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
             
-            {/* 显示当前进行中的转录 - 优化突出显示 */}
+            {/* 显示当前进行中的转录 - 连续文本显示 */}
             {(currentText || currentTranslation) && (
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl shadow-lg p-6 animate-pulse">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="space-y-2 bg-amber-50/50 p-4 rounded-lg border border-amber-200">
+                {/* 实时状态指示 */}
+                <div className="flex items-center gap-2 text-xs text-amber-700">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
                     <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                   </div>
-                  <span className="text-sm font-semibold text-amber-700 uppercase tracking-wider">
-                    实时转录中
-                  </span>
+                  <span className="font-medium">实时转录中...</span>
                 </div>
                 
-                <div className="space-y-4">
-                  {currentText && (
-                    <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-medium text-blue-700 uppercase tracking-wider">
-                          英文原声
-                        </span>
-                      </div>
-                      <div className="text-gray-900 font-medium text-lg leading-relaxed">
-                        {currentText}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {currentTranslation && (
-                    <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-400">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-medium text-green-700 uppercase tracking-wider">
-                          中文翻译
-                        </span>
-                      </div>
-                      <div className="text-gray-800 text-lg leading-relaxed">
-                        {currentTranslation}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {/* 英文原文 */}
+                {currentText && (
+                  <div className="text-gray-900 text-base leading-relaxed font-medium">
+                    {currentText}
+                  </div>
+                )}
+                
+                {/* 中文翻译 */}
+                {currentTranslation && (
+                  <div className="text-gray-700 text-base leading-relaxed pl-4 border-l-2 border-amber-300">
+                    {currentTranslation}
+                  </div>
+                )}
               </div>
             )}
             
@@ -519,6 +490,74 @@ export function EnhancedInterviewMain() {
           </div>
         </div>
       </div>
+
+      {/* 悬浮控制面板 - 解决滑动时不可见问题 */}
+      {isActive && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-3 backdrop-blur-sm bg-white/95">
+            <div className="flex items-center gap-3">
+              {/* 录制状态指示 */}
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  isPaused ? 'bg-orange-500' : 'bg-red-500 animate-pulse'
+                }`}></div>
+                <span className="text-sm font-mono font-medium text-gray-800">
+                  {formatTime(recordingTime)}
+                </span>
+              </div>
+              
+              <div className="h-4 w-px bg-gray-300"></div>
+              
+              {/* 控制按钮 */}
+              <div className="flex items-center gap-2">
+                {!isPaused ? (
+                  <Button 
+                    onClick={pauseStreaming}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 w-8 p-0 border-orange-300 text-orange-600 hover:bg-orange-50 rounded-full"
+                    title="暂停面试"
+                  >
+                    <Pause className="w-3 h-3" />
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={resumeStreaming}
+                    size="sm"
+                    className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700 rounded-full"
+                    title="继续面试"
+                  >
+                    <Play className="w-3 h-3" />
+                  </Button>
+                )}
+                
+                <Button 
+                  onClick={handleStopRecording}
+                  size="sm"
+                  variant="destructive"
+                  className="h-8 w-8 p-0 rounded-full"
+                  title="结束面试"
+                >
+                  <Square className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* 悬浮状态文字 */}
+            {isPaused && (
+              <div className="text-xs text-orange-600 text-center mt-1 font-medium">
+                已暂停
+              </div>
+            )}
+            
+            {isGeneratingSummary && (
+              <div className="text-xs text-blue-600 text-center mt-1 font-medium">
+                正在生成总结...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

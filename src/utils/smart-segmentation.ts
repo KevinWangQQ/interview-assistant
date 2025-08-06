@@ -101,14 +101,14 @@ export class SmartSegmentationProcessor {
     return complexityScore;
   }
 
-  // 🎯 判断是否应该创建新分段 - 重新设计基于静音和行数
+  // 🎯 改进的分段判断 - 减少重复和避免长句切断
   private shouldCreateNewSegment(
     newText: string, 
     currentTime: number,
     forceSegment: boolean = false,
     silenceDetected: boolean = false
   ): boolean {
-    const { text: currentText, startTime, lastUpdateTime, sentences } = this.currentBuffer;
+    const { text: currentText, startTime } = this.currentBuffer;
     
     // 强制分段
     if (forceSegment) return true;
@@ -119,24 +119,34 @@ export class SmartSegmentationProcessor {
     // 时间相关的分段条件
     const segmentDuration = currentTime - startTime;
     
-    // 计算文本行数（按换行符或每60字符一行估算）
-    const estimatedLines = Math.ceil(currentText.length / 60) + (currentText.match(/\n/g) || []).length;
+    // 计算词数而不是行数（更准确）
+    const wordCount = currentText.split(/\s+/).filter(word => word.length > 0).length;
     
-    // 检测完整句子
-    const currentSentences = this.detectSentenceBoundaries(currentText);
-    const hasCompleteSentence = currentSentences.length > 0 && 
+    // 检测完整句子结尾
+    const sentences = this.detectSentenceBoundaries(currentText);
+    const hasCompleteSentence = sentences.length > 0 && 
       this.config.sentenceEndMarkers.some(marker => 
-        currentSentences[currentSentences.length - 1].endsWith(marker)
+        currentText.trim().endsWith(marker)
       );
     
-    // 主要分段条件1：超过10行且有完整句子
-    if (estimatedLines >= 10 && hasCompleteSentence) {
-      console.log(`📏 文本超过10行(${estimatedLines}行)且有完整句子，触发分段`);
+    // 检测是否在句子中间（避免切断）
+    const endsWithIncompleteMarker = ['and', 'but', 'or', 'so', 'because', 'that', 'which', 'who', 'when', 'where', 'how', 'what', 'if', 'although', 'while']
+      .some(word => currentText.toLowerCase().trim().endsWith(' ' + word));
+    
+    // 避免在不完整的地方分段
+    if (endsWithIncompleteMarker) {
+      console.log(`🚫 避免在不完整位置分段: "${currentText.slice(-20)}"`);
+      return false;
+    }
+    
+    // 主要分段条件1：词数超过120词且有完整句子（减少分段频次）
+    if (wordCount >= 120 && hasCompleteSentence) {
+      console.log(`📏 文本超过120词(${wordCount}词)且有完整句子，触发分段`);
       return true;
     }
     
-    // 主要分段条件2：静音检测+完整句子
-    if (silenceDetected && hasCompleteSentence && segmentDuration >= 3) {
+    // 主要分段条件2：静音检测+完整句子+最小时长
+    if (silenceDetected && hasCompleteSentence && segmentDuration >= 5) {
       console.log('🔇 检测到静音+完整句子，触发分段');
       return true;
     }
@@ -148,7 +158,7 @@ export class SmartSegmentationProcessor {
     }
     
     // 兜底条件：句子过多，强制分段
-    if (currentSentences.length >= this.config.maxSentencesPerSegment) {
+    if (sentences.length >= this.config.maxSentencesPerSegment) {
       console.log('📝 达到最大句子数量，强制分段');
       return true;
     }
@@ -181,16 +191,19 @@ export class SmartSegmentationProcessor {
       this.currentBuffer.startTime = currentTime;
     }
     
+    // 智能文本合并 - 减少重复
+    const mergedText = this.mergeTextIntelligently(this.currentBuffer.text, newText);
+    
     // 更新缓冲区
-    this.currentBuffer.text = newText;
+    this.currentBuffer.text = mergedText;
     this.currentBuffer.translation = translation;
     this.currentBuffer.lastUpdateTime = currentTime;
-    this.currentBuffer.sentences = this.detectSentenceBoundaries(newText);
+    this.currentBuffer.sentences = this.detectSentenceBoundaries(mergedText);
     
-    // 检查是否需要创建新分段 - 传递静音检测参数
+    // 检查是否需要创建新分段
     let newSegment: TranscriptionSegment | null = null;
     
-    if (this.shouldCreateNewSegment(newText, currentTime, false, silenceDetected)) {
+    if (this.shouldCreateNewSegment(mergedText, currentTime, false, silenceDetected)) {
       newSegment = this.createSegmentFromBuffer(currentTime, confidence, speaker);
       this.resetBuffer();
     }
@@ -199,6 +212,50 @@ export class SmartSegmentationProcessor {
       newSegment,
       updatedBuffer: { ...this.currentBuffer }
     };
+  }
+
+  // 🧠 智能文本合并 - 减少重复内容
+  private mergeTextIntelligently(existingText: string, newText: string): string {
+    if (!existingText) return newText;
+    if (!newText) return existingText;
+    
+    // 如果新文本完全包含在现有文本中，返回现有文本
+    if (existingText.includes(newText)) {
+      return existingText;
+    }
+    
+    // 如果新文本完全包含现有文本，返回新文本
+    if (newText.includes(existingText)) {
+      return newText;
+    }
+    
+    // 寻找重复的后缀/前缀
+    const existingWords = existingText.trim().split(/\s+/);
+    const newWords = newText.trim().split(/\s+/);
+    
+    // 查找最长的公共后缀（现有文本的结尾和新文本的开头）
+    let overlapLength = 0;
+    const maxOverlap = Math.min(existingWords.length, newWords.length, 10); // 最多检查10个词
+    
+    for (let i = 1; i <= maxOverlap; i++) {
+      const existingSuffix = existingWords.slice(-i).join(' ').toLowerCase();
+      const newPrefix = newWords.slice(0, i).join(' ').toLowerCase();
+      
+      if (existingSuffix === newPrefix) {
+        overlapLength = i;
+      }
+    }
+    
+    if (overlapLength > 0) {
+      // 有重复，合并去重
+      const mergedWords = [...existingWords, ...newWords.slice(overlapLength)];
+      const result = mergedWords.join(' ');
+      console.log(`🔀 检测到${overlapLength}词重复，智能合并`);
+      return result;
+    }
+    
+    // 没有重复，直接拼接（但这种情况应该很少）
+    return existingText + ' ' + newText;
   }
 
   // 📦 从缓冲区创建分段
