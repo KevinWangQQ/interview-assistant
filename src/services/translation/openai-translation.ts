@@ -325,7 +325,7 @@ Format your response as JSON:
         max_tokens: 1
       });
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

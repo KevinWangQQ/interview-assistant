@@ -503,7 +503,7 @@ export class EnhancedWAVStreamingTranscriptionService {
       const transcriptionResult = await this.transcribeWithCache(wavBlob);
       
       if (transcriptionResult.text && transcriptionResult.text.trim()) {
-        let newText = this.cleanTranscriptionText(transcriptionResult.text.trim());
+        const newText = this.cleanTranscriptionText(transcriptionResult.text.trim());
         const confidence = transcriptionResult.confidence || 0.9;
         
         // 如果清理后文本为空，跳过
@@ -679,7 +679,7 @@ export class EnhancedWAVStreamingTranscriptionService {
       const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
-    } catch (error) {
+    } catch {
       // 回退到简单哈希
       return `${audioBlob.size}_${Date.now()}`;
     }
