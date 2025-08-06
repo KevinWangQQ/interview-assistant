@@ -139,19 +139,21 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           }
           
           // 将segments和当前活跃内容合并到completedSegments
-          let allSegments = [...segments];
-          if (currentText && currentTranslation) {
-            allSegments.push({
-              id: `final-segment-${Date.now()}`,
-              timestamp: new Date(),
-              englishText: currentText,
-              chineseText: currentTranslation,
-              speaker: 'candidate',
-              confidence: 0.9,
-              wordCount: currentText.split(' ').length,
-              isComplete: true
-            });
-          }
+          const allSegments = currentText && currentTranslation
+            ? [
+                ...segments,
+                {
+                  id: `final-segment-${Date.now()}`,
+                  timestamp: new Date(),
+                  englishText: currentText,
+                  chineseText: currentTranslation,
+                  speaker: 'candidate',
+                  confidence: 0.9,
+                  wordCount: currentText.split(' ').length,
+                  isComplete: true
+                }
+              ]
+            : [...segments];
           
           // 🏗️ 自动保存面试会话（即使没有转录内容也保存基础记录）
           console.log('🔍 停止录制检查 - segments数量:', allSegments.length);
