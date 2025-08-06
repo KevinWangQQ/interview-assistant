@@ -68,24 +68,27 @@ export class OpenAITranslationService implements ITranslationService {
       this.ensureClientInitialized();
       console.log(`[${translateId}] 客户端初始化完成`);
       
-      const prompt = this.buildTranslationPrompt(text, from, to);
-      console.log(`[${translateId}] 发送翻译请求...`);
+      // 🎯 优化的翻译API调用 - 减少重复翻译
+      const optimizedSystemPrompt = this.buildAntiRepetitionSystemPrompt();
+      const contextAwarePrompt = await this.buildContextAwarePrompt(text, from, to);
+      console.log(`[${translateId}] 发送优化翻译请求...`);
       
-      // 使用Promise.race实现超时控制
       const translationPromise = this.client!.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',  // 升级到更智能的模型
         messages: [
           {
             role: 'system',
-            content: 'You are a professional translator. Translate the given text accurately while maintaining the original meaning and tone.'
+            content: optimizedSystemPrompt
           },
           {
             role: 'user',
-            content: prompt
+            content: contextAwarePrompt
           }
         ],
-        temperature: 0.3,
-        max_tokens: 500
+        temperature: 0.1,  // 降低温度减少创造性重复
+        max_tokens: 800,   // 增加token限制避免截断重复
+        presence_penalty: 0.3,  // 减少重复内容
+        frequency_penalty: 0.5   // 降低词频重复
       });
       
       const timeoutPromise = new Promise((_, reject) => {
@@ -350,6 +353,108 @@ Format your response as JSON:
 
 Text to translate:
 ${text}`;
+  }
+
+  // 🧠 构建反重复的系统提示词
+  private buildAntiRepetitionSystemPrompt(): string {
+    return `You are a professional translator specializing in interview conversations. Your task is to provide accurate, concise translations while avoiding repetition.
+
+Key guidelines:
+1. Detect and eliminate redundant phrases or repeated content in the source text before translating
+2. If the source contains obvious repetitions, consolidate them into a single, clear translation
+3. Focus on the core meaning rather than literal word-for-word translation of repetitive elements
+4. Maintain professional tone suitable for interview contexts
+5. Do not add explanations, just provide the clean translation
+6. If the source text is low quality or heavily repetitive, provide the most coherent interpretation
+
+Prioritize clarity and conciseness over literal preservation of repetitive elements.`;
+  }
+
+  // 🔄 构建上下文感知的翻译提示
+  private async buildContextAwarePrompt(text: string, from: string, to: string): Promise<string> {
+    const languageNames: Record<string, string> = {
+      'en': 'English',
+      'zh': 'Chinese',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'ja': 'Japanese',
+      'ko': 'Korean'
+    };
+
+    const fromLang = languageNames[from] || from;
+    const toLang = languageNames[to] || to;
+
+    // 预处理文本 - 检测和标记重复模式
+    const textAnalysis = this.analyzeTextForRepetition(text);
+    let processedText = text;
+    
+    if (textAnalysis.hasRepetition) {
+      console.log(`🔍 检测到翻译源文本重复，重复比例: ${Math.round(textAnalysis.repetitionRatio * 100)}%`);
+      processedText = this.consolidateRepetitiveText(text);
+      console.log(`🧹 文本预处理完成: "${text.substring(0, 50)}..." -> "${processedText.substring(0, 50)}..."`);
+    }
+
+    return `Translate the following ${fromLang} text to ${toLang}. This is from an interview conversation context.
+
+${textAnalysis.hasRepetition ? 'Note: The source text contained repetitive elements that have been consolidated.' : ''}
+
+Text to translate:
+${processedText}`;
+  }
+
+  // 📊 分析文本重复模式
+  private analyzeTextForRepetition(text: string): { hasRepetition: boolean; repetitionRatio: number } {
+    if (!text || text.trim().length < 20) {
+      return { hasRepetition: false, repetitionRatio: 0 };
+    }
+
+    const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const uniqueWords = new Set(words);
+    const repetitionRatio = 1 - (uniqueWords.size / words.length);
+    
+    // 检测短语级重复
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+    const uniqueSentences = new Set(sentences.map(s => s.trim().toLowerCase()));
+    const sentenceRepetitionRatio = 1 - (uniqueSentences.size / sentences.length);
+    
+    const hasRepetition = repetitionRatio > 0.3 || sentenceRepetitionRatio > 0.2;
+    
+    return {
+      hasRepetition,
+      repetitionRatio: Math.max(repetitionRatio, sentenceRepetitionRatio)
+    };
+  }
+
+  // 🔧 整理重复文本
+  private consolidateRepetitiveText(text: string): string {
+    let consolidated = text;
+    
+    // 1. 移除重复的短句
+    consolidated = consolidated.replace(/\b([^.!?]{1,30}[.!?])\s*\1{2,}/gi, '$1');
+    
+    // 2. 移除连续相同的词汇组合
+    consolidated = consolidated.replace(/\b(\w+(?:\s+\w+){0,3})\s+\1{2,}/gi, '$1');
+    
+    // 3. 清理过多的填充词
+    consolidated = consolidated.replace(/\b(um|uh|er|ah|like|you know)\s*\1+/gi, '$1');
+    
+    // 4. 句子级去重
+    const sentences = consolidated.split(/[.!?]+/).filter(s => s.trim());
+    const uniqueSentences: string[] = [];
+    const seenSentences = new Set<string>();
+    
+    for (const sentence of sentences) {
+      const normalized = sentence.trim().toLowerCase();
+      if (!seenSentences.has(normalized) && normalized.length > 5) {
+        uniqueSentences.push(sentence.trim());
+        seenSentences.add(normalized);
+      }
+    }
+    
+    const result = uniqueSentences.join('. ') + (uniqueSentences.length > 0 ? '.' : '');
+    
+    return result || text; // 如果清理后为空，返回原文
   }
 
   private updateUsageStats(usage?: any): void {

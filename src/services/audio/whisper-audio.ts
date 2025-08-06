@@ -245,25 +245,30 @@ export class WhisperAudioService implements IAudioService {
       });
       
       
-      // 调用Whisper API
+      // 🎯 优化的Whisper API调用 - 减少重复生成
       const formData = new FormData();
       formData.append('file', audioToSend, fileName);
       formData.append('model', options?.model || 'whisper-1');
+      
+      // 使用verbose_json格式获取更多置信度信息
+      formData.append('response_format', 'verbose_json');
       
       if (options?.language) {
         formData.append('language', options.language);
         console.log(`[${transcribeId}] 设置语言:`, options.language);
       }
       
-      if (options?.prompt) {
-        formData.append('prompt', options.prompt);
-        console.log(`[${transcribeId}] 设置提示词:`, options.prompt);
+      // 智能prompt：包含去重指导和上下文
+      const optimizedPrompt = this.buildAntiRepetitionPrompt(options?.prompt);
+      if (optimizedPrompt) {
+        formData.append('prompt', optimizedPrompt);
+        console.log(`[${transcribeId}] 设置优化提示词:`, optimizedPrompt);
       }
 
-      if (options?.temperature !== undefined) {
-        formData.append('temperature', options.temperature.toString());
-        console.log(`[${transcribeId}] 设置温度:`, options.temperature);
-      }
+      // 🔧 优化温度参数：使用0.0完全确定性，减少随机重复
+      const optimizedTemperature = 0.0; // 降低到0，完全确定性
+      formData.append('temperature', optimizedTemperature.toString());
+      console.log(`[${transcribeId}] 设置优化温度:`, optimizedTemperature);
 
       console.log(`[${transcribeId}] 发送Whisper API请求...`);
       
@@ -293,11 +298,11 @@ export class WhisperAudioService implements IAudioService {
       const result = await response.json();
       console.log(`[${transcribeId}] 转录结果:`, result);
       
-      return {
-        text: result.text || '',
-        confidence: 0.9, // Whisper不提供置信度，使用默认值
-        segments: result.segments || undefined
-      };
+      // 🔍 基于verbose_json格式解析增强结果
+      const enhancedResult = this.parseVerboseTranscriptionResult(result);
+      console.log(`[${transcribeId}] 增强解析结果:`, enhancedResult);
+      
+      return enhancedResult;
     } catch (error) {
       console.error(`[${transcribeId}] 转录详细错误:`, error);
       
@@ -590,6 +595,108 @@ export class WhisperAudioService implements IAudioService {
     }
 
     return new Blob([arrayBuffer], { type: 'audio/wav' });
+  }
+
+  // 🧠 构建反重复的智能提示词
+  private buildAntiRepetitionPrompt(originalPrompt?: string): string {
+    const prompt = originalPrompt || '';
+    
+    // 添加反重复指导
+    const antiRepetitionGuidance = [
+      'Professional interview conversation.',
+      'Avoid repeating phrases or words unnecessarily.',
+      'Focus on clear, concise speech transcription.',
+      'Technical interview context.'
+    ].join(' ');
+    
+    // 合并原始prompt和反重复指导
+    if (prompt) {
+      return `${prompt} ${antiRepetitionGuidance}`;
+    } else {
+      return antiRepetitionGuidance;
+    }
+  }
+
+  // 📊 解析verbose_json格式的转录结果
+  private parseVerboseTranscriptionResult(result: any): TranscriptionResult {
+    if (!result) {
+      return { text: '', confidence: 0 };
+    }
+    
+    const text = result.text || '';
+    let confidence = 0.9; // 默认置信度
+    
+    // 从segments中计算平均置信度
+    if (result.segments && Array.isArray(result.segments) && result.segments.length > 0) {
+      const validSegments = result.segments.filter((seg: any) => 
+        seg && typeof seg.avg_logprob === 'number'
+      );
+      
+      if (validSegments.length > 0) {
+        // 使用avg_logprob计算置信度（范围通常是-1到0）
+        const avgLogProb = validSegments.reduce((sum: number, seg: any) => 
+          sum + seg.avg_logprob, 0) / validSegments.length;
+        
+        // 转换logprob到0-1范围的置信度
+        confidence = Math.max(0, Math.min(1, Math.exp(avgLogProb)));
+        
+        console.log(`📊 计算得出置信度: ${confidence.toFixed(3)} (基于${validSegments.length}个片段)`);
+        
+        // 过滤低置信度片段的文本
+        if (confidence < 0.3) {
+          console.log('⚠️ 低置信度转录，可能包含幻觉内容');
+          
+          // 检查是否有明显的重复模式
+          const words = text.split(/\s+/);
+          const uniqueWords = new Set(words.filter((w: string) => w.length > 2));
+          const repetitionRatio = 1 - (uniqueWords.size / words.length);
+          
+          if (repetitionRatio > 0.4) {
+            console.log(`🚫 检测到高重复比例(${Math.round(repetitionRatio*100)}%)，返回空结果`);
+            return { text: '', confidence: 0 };
+          }
+        }
+      }
+    }
+    
+    // 额外的重复检测和清理
+    const cleanedText = this.cleanTranscriptionWithConfidence(text, confidence);
+    
+    return {
+      text: cleanedText,
+      confidence,
+      segments: result.segments || undefined
+    };
+  }
+
+  // 🧹 基于置信度的转录清理
+  private cleanTranscriptionWithConfidence(text: string, confidence: number): string {
+    if (!text || !text.trim()) return '';
+    
+    let cleaned = text.trim();
+    
+    // 低置信度时进行更严格的清理
+    if (confidence < 0.5) {
+      console.log(`🔍 低置信度(${confidence.toFixed(3)})，应用严格清理`);
+      
+      // 移除明显的重复短语
+      cleaned = cleaned.replace(/\b([^.!?]{1,20}[.!?])\s*\1{2,}/gi, '$1');
+      
+      // 移除过多的填充词
+      cleaned = cleaned.replace(/\b(um|uh|er|ah|like|you know)\b\s*/gi, '');
+      
+      // 检查整体重复模式
+      const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim());
+      if (sentences.length > 2) {
+        const uniqueSentences = [...new Set(sentences.map(s => s.trim().toLowerCase()))];
+        if (uniqueSentences.length < sentences.length * 0.7) {
+          console.log('🚫 检测到句子级重复，进行去重');
+          cleaned = uniqueSentences.join('. ') + '.';
+        }
+      }
+    }
+    
+    return cleaned;
   }
 
   private cleanup(): void {

@@ -50,6 +50,11 @@ export class EnhancedWAVStreamingTranscriptionService {
   private segmentationProcessor: SmartSegmentationProcessor;
   private recordingStartTime: number = 0;
   
+  // 🎯 接口调用优化
+  private transcriptionCache = new Map<string, any>();
+  private translationCache = new Map<string, any>();
+  private recentRequests = new Set<string>();
+  
   // 多音频源管理
   private microphoneSource: AudioSourceInfo = {
     type: 'microphone',
@@ -92,7 +97,7 @@ export class EnhancedWAVStreamingTranscriptionService {
 
   constructor(config: Partial<EnhancedWAVStreamingConfig> = {}) {
     this.config = {
-      chunkInterval: 1000, // 缩短到1秒，提高响应速度
+      chunkInterval: 2000, // 🎯 优化为2秒，平衡响应速度和音频质量
       translationDelay: 500, // 缩短翻译延迟
       enableSystemAudio: true,
       audioQualityThreshold: 0.1,
@@ -454,6 +459,16 @@ export class EnhancedWAVStreamingTranscriptionService {
       return;
     }
 
+    // 🎯 音频质量门槛检查
+    const audioQuality = this.calculateAudioQuality();
+    if (audioQuality < this.config.audioQualityThreshold) {
+      console.log(`🚫 音频质量过低(${audioQuality.toFixed(3)})，跳过处理`);
+      // 保留一些音频块以备下次检查
+      const keepSize = Math.max(1, Math.floor(this.audioChunks.length * 0.3));
+      this.audioChunks = this.audioChunks.slice(-keepSize);
+      return;
+    }
+
     try {
       // 合并PCM数据
       const pcmData = this.mergePCMChunks();
@@ -461,13 +476,17 @@ export class EnhancedWAVStreamingTranscriptionService {
       // 转换为WAV格式
       const wavBlob = this.createWAVBlob(pcmData, 16000, 1);
       
-      // 改进：保留最后25%的音频数据作为重叠，避免分段边界音频丢失
-      const overlapSize = Math.floor(this.audioChunks.length * 0.25);
-      if (overlapSize > 0) {
+      // 🎯 优化：减少音频重叠至10%，减少重复转录
+      const audioQuality = this.calculateAudioQuality();
+      const overlapRatio = audioQuality > 0.7 ? 0.1 : 0.15; // 动态调整重叠比例
+      const overlapSize = Math.floor(this.audioChunks.length * overlapRatio);
+      
+      if (overlapSize > 0 && this.audioChunks.length > 5) { // 添加最小数量限制
         this.audioChunks = this.audioChunks.slice(-overlapSize);
-        console.log(`🔄 保留${overlapSize}个音频块作为重叠缓冲`);
+        console.log(`🔄 保留${overlapSize}个音频块作为重叠缓冲(比例: ${Math.round(overlapRatio*100)}%)`);
       } else {
         this.audioChunks = [];
+        console.log('🗑️ 清空音频缓冲区，开始新分段');
       }
       
       console.log('🎵 增强版WAV音频数据准备完成:', {
@@ -480,8 +499,8 @@ export class EnhancedWAVStreamingTranscriptionService {
         }
       });
 
-      // 转录音频
-      const transcriptionResult = await this.transcribeAudio(wavBlob);
+      // 🎯 使用缓存转录音频
+      const transcriptionResult = await this.transcribeWithCache(wavBlob);
       
       if (transcriptionResult.text && transcriptionResult.text.trim()) {
         let newText = this.cleanTranscriptionText(transcriptionResult.text.trim());
@@ -653,6 +672,113 @@ export class EnhancedWAVStreamingTranscriptionService {
     return new Blob([buffer], { type: 'audio/wav' });
   }
 
+  // 🎯 计算音频哈希用于去重
+  private async calculateAudioHash(audioBlob: Blob): Promise<string> {
+    try {
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+    } catch (error) {
+      // 回退到简单哈希
+      return `${audioBlob.size}_${Date.now()}`;
+    }
+  }
+
+  // 🎯 检查是否为重复请求
+  private isDuplicateRequest(identifier: string): boolean {
+    if (this.recentRequests.has(identifier)) {
+      console.log(`🚫 跳过重复请求: ${identifier}`);
+      return true;
+    }
+    
+    // 添加到最近请求集合，30秒后清理
+    this.recentRequests.add(identifier);
+    setTimeout(() => {
+      this.recentRequests.delete(identifier);
+    }, 30000);
+    
+    return false;
+  }
+
+  // 🎯 带缓存的转录
+  private async transcribeWithCache(audioBlob: Blob): Promise<any> {
+    const audioHash = await this.calculateAudioHash(audioBlob);
+    
+    // 检查缓存
+    if (this.transcriptionCache.has(audioHash)) {
+      console.log(`📦 使用转录缓存: ${audioHash}`);
+      return this.transcriptionCache.get(audioHash);
+    }
+    
+    // 检查重复请求
+    if (this.isDuplicateRequest(`transcribe_${audioHash}`)) {
+      return { text: '', confidence: 0 };
+    }
+    
+    try {
+      const result = await this.transcribeAudio(audioBlob);
+      
+      // 缓存结果（最多保存20个）
+      if (this.transcriptionCache.size >= 20) {
+        const firstKey = this.transcriptionCache.keys().next().value;
+        this.transcriptionCache.delete(firstKey);
+      }
+      this.transcriptionCache.set(audioHash, result);
+      
+      return result;
+    } catch (error) {
+      console.error('转录失败:', error);
+      throw error;
+    }
+  }
+
+  // 🎯 带缓存的翻译
+  private async translateWithCache(text: string): Promise<any> {
+    const textHash = this.calculateTextHash(text);
+    
+    // 检查缓存
+    if (this.translationCache.has(textHash)) {
+      console.log(`📦 使用翻译缓存: ${textHash}`);
+      return this.translationCache.get(textHash);
+    }
+    
+    // 检查重复请求
+    if (this.isDuplicateRequest(`translate_${textHash}`)) {
+      return { translatedText: text };
+    }
+    
+    try {
+      const { getTranslationService } = await import('@/services');
+      const translationService = getTranslationService();
+      const result = await translationService.translate(text, 'en', 'zh');
+      
+      // 缓存结果（最多保存30个）
+      if (this.translationCache.size >= 30) {
+        const firstKey = this.translationCache.keys().next().value;
+        this.translationCache.delete(firstKey);
+      }
+      this.translationCache.set(textHash, result);
+      
+      return result;
+    } catch (error) {
+      console.error('翻译失败:', error);
+      throw error;
+    }
+  }
+
+  // 🎯 计算文本哈希
+  private calculateTextHash(text: string): string {
+    const normalized = text.toLowerCase().trim().replace(/\s+/g, ' ');
+    let hash = 0;
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 32位整数
+    }
+    return Math.abs(hash).toString(16);
+  }
+
   // 🗣️ 转录音频（复用原有逻辑）
   private async transcribeAudio(audioBlob: Blob): Promise<any> {
     const { getAudioService } = await import('@/services');
@@ -664,9 +790,11 @@ export class EnhancedWAVStreamingTranscriptionService {
       isWAV: audioBlob.type === 'audio/wav'
     });
     
+    // 🎯 使用优化的参数减少重复
     return await audioService.transcribe(audioBlob, {
       language: 'en',
-      temperature: 0.2
+      temperature: 0.0,  // 完全确定性，消除随机重复
+      prompt: 'Professional English interview conversation. Clear, concise speech without repetition.'
     });
   }
 
@@ -780,9 +908,6 @@ export class EnhancedWAVStreamingTranscriptionService {
   // 🌐 翻译文本（集成智能分段）
   private async translateText(): Promise<void> {
     try {
-      const { getTranslationService } = await import('@/services');
-      const translationService = getTranslationService();
-      
       // 翻译前预清理文本
       const cleanedText = this.cleanTextForTranslation(this.currentText);
       
@@ -793,11 +918,8 @@ export class EnhancedWAVStreamingTranscriptionService {
       
       console.log('🌐 开始翻译增强版WAV转录结果:', cleanedText.substring(0, 50) + '...');
       
-      const result = await translationService.translate(
-        cleanedText,
-        'en',
-        'zh'
-      );
+      // 🎯 使用缓存翻译
+      const result = await this.translateWithCache(cleanedText);
       
       // 更新当前翻译
       this.currentTranslation = result.translatedText;
@@ -856,6 +978,121 @@ export class EnhancedWAVStreamingTranscriptionService {
     }
   }
 
+  // 📊 计算当前音频质量评分
+  private calculateAudioQuality(): number {
+    if (!this.qualityAnalyser || !this.qualityDataArray) {
+      return 0.5; // 默认中等质量
+    }
+
+    try {
+      this.qualityAnalyser.getByteFrequencyData(this.qualityDataArray);
+      
+      // 计算频域能量分布
+      let totalEnergy = 0;
+      let highFreqEnergy = 0;
+      const midPoint = Math.floor(this.qualityDataArray.length / 2);
+      
+      for (let i = 0; i < this.qualityDataArray.length; i++) {
+        const value = this.qualityDataArray[i];
+        totalEnergy += value;
+        
+        if (i > midPoint) {
+          highFreqEnergy += value;
+        }
+      }
+      
+      // 避免除零错误
+      if (totalEnergy === 0) {
+        return 0.1;
+      }
+      
+      // 音频质量评分基于总能量和频域分布
+      const energyScore = Math.min(totalEnergy / (this.qualityDataArray.length * 255), 1);
+      const frequencyBalance = highFreqEnergy / totalEnergy;
+      
+      // 综合评分：能量强度 + 频域平衡度
+      const qualityScore = (energyScore * 0.7) + (frequencyBalance * 0.3);
+      
+      return Math.max(0.1, Math.min(1.0, qualityScore));
+      
+    } catch (error) {
+      console.warn('音频质量计算失败:', error);
+      return 0.5;
+    }
+  }
+
+  // 🎯 动态调整处理间隔
+  private calculateDynamicInterval(): number {
+    const baseInterval = this.config.chunkInterval;
+    const audioQuality = this.calculateAudioQuality();
+    const silenceRatio = this.calculateSilenceRatio();
+    
+    // 高质量音频可以用更长间隔，低质量音频需要更频繁处理
+    let qualityMultiplier = 1.0;
+    if (audioQuality > 0.8) {
+      qualityMultiplier = 1.3; // 高质量，延长间隔30%
+    } else if (audioQuality < 0.3) {
+      qualityMultiplier = 0.7; // 低质量，缩短间隔30%
+    }
+    
+    // 如果大部分时间是静音，可以延长处理间隔
+    let silenceMultiplier = 1.0;
+    if (silenceRatio > 0.7) {
+      silenceMultiplier = 1.5; // 大量静音，延长间隔
+    } else if (silenceRatio < 0.2) {
+      silenceMultiplier = 0.8; // 活跃对话，缩短间隔
+    }
+    
+    const dynamicInterval = Math.round(baseInterval * qualityMultiplier * silenceMultiplier);
+    
+    // 限制在合理范围内 (1-5秒)
+    return Math.max(1000, Math.min(5000, dynamicInterval));
+  }
+
+  // 🔇 计算静音比例
+  private calculateSilenceRatio(): number {
+    const totalTime = Date.now() - this.recordingStartTime;
+    if (totalTime < 5000) { // 前5秒不计算
+      return 0.5;
+    }
+    
+    const silenceDuration = this.isSilent ? (Date.now() - this.silenceStartTime) : 0;
+    return Math.min(silenceDuration / totalTime, 1.0);
+  }
+
+  // 📅 动态调度下一次音频处理
+  private scheduleNextProcessing(): void {
+    if (this.recordTimer) {
+      clearTimeout(this.recordTimer);
+      this.recordTimer = null;
+    }
+
+    if (!this.isRecording) {
+      return;
+    }
+
+    const dynamicInterval = this.calculateDynamicInterval();
+    console.log(`🎯 动态调整处理间隔: ${dynamicInterval}ms`);
+
+    this.recordTimer = setTimeout(async () => {
+      try {
+        await this.processAudioChunks();
+        
+        // 递归调度下一次处理
+        this.scheduleNextProcessing();
+        
+      } catch (error) {
+        console.error('❌ 录音循环错误:', error);
+        this.emitEvent('error', { error, message: '录音处理错误' });
+        
+        // 即使出错也要继续调度
+        if (this.isRecording) {
+          this.scheduleNextProcessing();
+        }
+      }
+    }, dynamicInterval);
+  }
+
   // 🛑 停止服务
   async stopStreaming(): Promise<void> {
     console.log('🛑 停止增强版WAV流式转录服务');
@@ -877,7 +1114,7 @@ export class EnhancedWAVStreamingTranscriptionService {
     
     // 清理定时器
     if (this.recordTimer) {
-      clearInterval(this.recordTimer);
+      clearTimeout(this.recordTimer); // 改为clearTimeout因为现在使用setTimeout
       this.recordTimer = null;
     }
     
@@ -983,15 +1220,8 @@ export class EnhancedWAVStreamingTranscriptionService {
 
   // ⏰ 启动录制定时器
   private startRecordingTimers(): void {
-    // 启动录音循环
-    this.recordTimer = setInterval(async () => {
-      try {
-        await this.processAudioChunks();
-      } catch (error) {
-        console.error('❌ 录音循环错误:', error);
-        this.emitEvent('error', { error, message: '录音处理错误' });
-      }
-    }, this.config.chunkInterval);
+    // 🎯 启动动态录音循环
+    this.scheduleNextProcessing();
 
     // 启动音频质量监控
     this.qualityTimer = setInterval(() => {
