@@ -133,17 +133,35 @@ export class SmartSegmentationProcessor {
     const endsWithIncompleteMarker = ['and', 'but', 'or', 'so', 'because', 'that', 'which', 'who', 'when', 'where', 'how', 'what', 'if', 'although', 'while']
       .some(word => currentText.toLowerCase().trim().endsWith(' ' + word));
     
-    // 检测大量重复文本 - 紧急分段条件
-    if (currentText.length > 1000) {
+    // 检测大量重复文本 - 紧急分段条件（降低触发条件）
+    if (currentText.length > 500) {
       // 计算重复词汇比例
       const words = currentText.split(/\s+/);
       const uniqueWords = new Set(words.filter((w: string) => w.length > 2));
       const repetitionRatio = 1 - (uniqueWords.size / words.length);
       
-      if (repetitionRatio > 0.6) {
+      if (repetitionRatio > 0.4) {
         console.log(`🚨 检测到大量重复(${Math.round(repetitionRatio*100)}%)，强制分段`);
         return true;
       }
+    }
+    
+    // 检测连续相同词汇 - 立即分段
+    const words = currentText.split(/\s+/);
+    let consecutiveCount = 1;
+    let maxConsecutive = 1;
+    for (let i = 1; i < words.length; i++) {
+      if (words[i].toLowerCase() === words[i-1].toLowerCase()) {
+        consecutiveCount++;
+        maxConsecutive = Math.max(maxConsecutive, consecutiveCount);
+      } else {
+        consecutiveCount = 1;
+      }
+    }
+    
+    if (maxConsecutive >= 3) {
+      console.log(`🚨 检测到连续重复词汇(${maxConsecutive}次)，强制分段`);
+      return true;
     }
     
     // 避免在不完整的地方分段
@@ -259,7 +277,7 @@ export class SmartSegmentationProcessor {
       existingWords.includes(word) && word.length > 2 // 忽略短词
     );
     
-    if (duplicateWords.length > newWords.length * 0.8) {
+    if (duplicateWords.length > newWords.length * 0.5) {
       console.log(`🚫 检测到大量重复(${Math.round(duplicateWords.length/newWords.length*100)}%)，跳过合并`);
       return existingText;
     }

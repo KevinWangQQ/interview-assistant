@@ -484,8 +484,14 @@ export class EnhancedWAVStreamingTranscriptionService {
       const transcriptionResult = await this.transcribeAudio(wavBlob);
       
       if (transcriptionResult.text && transcriptionResult.text.trim()) {
-        const newText = transcriptionResult.text.trim();
+        let newText = this.cleanTranscriptionText(transcriptionResult.text.trim());
         const confidence = transcriptionResult.confidence || 0.9;
+        
+        // 如果清理后文本为空，跳过
+        if (!newText) {
+          console.log(`🚫 清理后文本为空，跳过处理`);
+          return;
+        }
         
         // 置信度过滤：过滤掉低置信度的结果（通常是幻觉或杂音）
         if (confidence < this.config.minConfidenceScore) {
@@ -500,7 +506,7 @@ export class EnhancedWAVStreamingTranscriptionService {
           return;
         }
         
-        // 累积当前分段的文本 - 添加重复检测保护
+        // 累积当前分段的文本 - 添加强化重复检测保护
         if (this.currentText) {
           // 检查是否完全重复
           if (this.currentText.includes(newText.trim())) {
@@ -508,15 +514,50 @@ export class EnhancedWAVStreamingTranscriptionService {
             return;
           }
           
-          // 检查是否大量重复
-          const existingWords = this.currentText.split(/\s+/);
+          // 检查异常长重复字符（如 "Byeeeee", "theeeee"）
+          if (newText.match(/(.)\1{5,}/) || newText.match(/\b(\w+)\s+\1\s+\1/)) {
+            console.log(`🚫 检测到异常重复字符："${newText}"，跳过累积`);
+            return;
+          }
+          
+          // 检查连续相同词汇（如 "the the the"）
           const newWords = newText.split(/\s+/);
+          let consecutiveCount = 1;
+          let maxConsecutive = 1;
+          for (let i = 1; i < newWords.length; i++) {
+            if (newWords[i].toLowerCase() === newWords[i-1].toLowerCase()) {
+              consecutiveCount++;
+              maxConsecutive = Math.max(maxConsecutive, consecutiveCount);
+            } else {
+              consecutiveCount = 1;
+            }
+          }
+          
+          if (maxConsecutive >= 3) {
+            console.log(`🚫 检测到连续重复词汇(${maxConsecutive}次)："${newWords[0]}"，跳过累积`);
+            return;
+          }
+          
+          // 检查是否大量重复 - 降低阈值到50%
+          const existingWords = this.currentText.split(/\s+/);
           const duplicateWords = newWords.filter((word: string) => 
             existingWords.includes(word) && word.length > 2
           );
           
-          if (duplicateWords.length > newWords.length * 0.7) {
+          if (duplicateWords.length > newWords.length * 0.5) {
             console.log(`🚫 检测到大量重复内容(${Math.round(duplicateWords.length/newWords.length*100)}%)，跳过累积`);
+            return;
+          }
+          
+          // 检查整体文本是否过于重复
+          const combinedText = this.currentText + ' ' + newText;
+          const allWords = combinedText.split(/\s+/);
+          const uniqueWords = new Set(allWords.filter((w: string) => w.length > 2));
+          const repetitionRatio = 1 - (uniqueWords.size / allWords.length);
+          
+          if (repetitionRatio > 0.5) {
+            console.log(`🚫 整体重复比例过高(${Math.round(repetitionRatio*100)}%)，触发分段`);
+            // 不累积，而是保持当前文本，让分段机制处理
             return;
           }
           
@@ -629,6 +670,100 @@ export class EnhancedWAVStreamingTranscriptionService {
     });
   }
 
+  // 🧹 清理转录文本 - 移除异常内容和重复
+  private cleanTranscriptionText(text: string): string {
+    if (!text) return '';
+    
+    let cleaned = text.trim();
+    
+    // 1. 移除异常长的重复字符（如 "Byeeeeee"）
+    cleaned = cleaned.replace(/(.)\1{5,}/g, '$1$1'); // 将6个以上连续字符缩减为2个
+    
+    // 2. 移除连续的相同词汇（保留最多2个）
+    cleaned = cleaned.replace(/\b(\w+)(\s+\1){3,}/gi, '$1 $1'); // 将4个以上连续相同词汇缩减为2个
+    
+    // 3. 移除明显的转录错误模式
+    const errorPatterns = [
+      /^(um+|uh+|er+|ah+)$/i,           // 纯填充词
+      /^[^a-zA-Z]*$/,                   // 无有效字母
+      /(.)\1{10,}/,                     // 超长重复字符
+      /^(bye+|yeah+|ok+|okay+)$/i       // 过短的常见词汇
+    ];
+    
+    for (const pattern of errorPatterns) {
+      if (pattern.test(cleaned)) {
+        console.log(`🧹 过滤异常转录: "${cleaned}"`);
+        return '';
+      }
+    }
+    
+    // 4. 清理过多的标点符号
+    cleaned = cleaned.replace(/[.]{3,}/g, '...');
+    cleaned = cleaned.replace(/[!]{2,}/g, '!');
+    cleaned = cleaned.replace(/[?]{2,}/g, '?');
+    
+    // 5. 标准化空格
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    // 6. 长度检查
+    if (cleaned.length > 500) {
+      console.log(`🧹 截断过长文本: 原长度${cleaned.length} -> 500字符`);
+      cleaned = cleaned.substring(0, 500) + '...';
+    }
+    
+    return cleaned;
+  }
+
+  // 🧹 翻译前文本清理 - 移除重复提升翻译质量
+  private cleanTextForTranslation(text: string): string {
+    if (!text) return '';
+    
+    let cleaned = text.trim();
+    
+    // 1. 移除连续重复的短语（如 "Thank you. Thank you. Thank you."）
+    cleaned = cleaned.replace(/\b([^.!?]+[.!?])\s*\1+/gi, '$1');
+    
+    // 2. 移除过多的连续相同词汇
+    cleaned = cleaned.replace(/\b(\w+)(\s+\1){2,}/gi, '$1 $1');
+    
+    // 3. 清理过多的填充词
+    cleaned = cleaned.replace(/\b(um|uh|er|ah|like|you know)\s*/gi, '');
+    
+    // 4. 合并重复的句子结构
+    const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim());
+    const uniqueSentences: string[] = [];
+    
+    for (const sentence of sentences) {
+      const trimmed = sentence.trim();
+      if (trimmed && !uniqueSentences.some(existing => 
+        this.calculateSimilarity(existing, trimmed) > 0.8
+      )) {
+        uniqueSentences.push(trimmed);
+      }
+    }
+    
+    cleaned = uniqueSentences.join('. ').trim();
+    if (cleaned && !cleaned.endsWith('.') && !cleaned.endsWith('!') && !cleaned.endsWith('?')) {
+      cleaned += '.';
+    }
+    
+    return cleaned;
+  }
+
+  // 计算两个字符串的相似度
+  private calculateSimilarity(str1: string, str2: string): number {
+    const words1 = str1.toLowerCase().split(/\s+/);
+    const words2 = str2.toLowerCase().split(/\s+/);
+    
+    if (words1.length === 0 && words2.length === 0) return 1;
+    if (words1.length === 0 || words2.length === 0) return 0;
+    
+    const commonWords = words1.filter(word => words2.includes(word)).length;
+    const maxLength = Math.max(words1.length, words2.length);
+    
+    return commonWords / maxLength;
+  }
+
   // 🌍 调度翻译（复用原有逻辑）
   private scheduleTranslation(): void {
     if (this.translationTimer) {
@@ -648,10 +783,18 @@ export class EnhancedWAVStreamingTranscriptionService {
       const { getTranslationService } = await import('@/services');
       const translationService = getTranslationService();
       
-      console.log('🌐 开始翻译增强版WAV转录结果:', this.currentText.substring(0, 50) + '...');
+      // 翻译前预清理文本
+      const cleanedText = this.cleanTextForTranslation(this.currentText);
+      
+      if (!cleanedText) {
+        console.log('🚫 清理后文本为空，跳过翻译');
+        return;
+      }
+      
+      console.log('🌐 开始翻译增强版WAV转录结果:', cleanedText.substring(0, 50) + '...');
       
       const result = await translationService.translate(
-        this.currentText,
+        cleanedText,
         'en',
         'zh'
       );
