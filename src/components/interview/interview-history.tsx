@@ -11,13 +11,10 @@ import {
   Search, 
   Trash2, 
   Eye, 
-  Calendar,
   Clock,
   User,
   Briefcase,
-  FileText,
-  Download,
-  ChevronDown
+  Download
 } from 'lucide-react';
 import { useInterviewHistoryStore } from '@/store/interview-history-store';
 import { EnhancedInterviewSession } from '@/types/enhanced-interview';

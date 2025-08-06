@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,9 +15,7 @@ import {
   CheckCircle, 
   AlertCircle,
   Info,
-  Volume2,
   Headphones,
-  Settings,
   RefreshCw
 } from 'lucide-react';
 import { useEnhancedWAVStreamingStore } from '@/store/enhanced-wav-streaming-store';
@@ -40,12 +38,7 @@ export function AudioSetupGuide({ onComplete, onSkip }: AudioSetupGuideProps) {
     error 
   } = useEnhancedWAVStreamingStore();
 
-  useEffect(() => {
-    // 自动开始检测
-    handleDetectAudioSources();
-  }, []);
-
-  const handleDetectAudioSources = async () => {
+  const handleDetectAudioSources = useCallback(async () => {
     setIsDetecting(true);
     try {
       await detectAudioSources();
@@ -54,7 +47,12 @@ export function AudioSetupGuide({ onComplete, onSkip }: AudioSetupGuideProps) {
     } finally {
       setIsDetecting(false);
     }
-  };
+  }, [detectAudioSources]);
+
+  useEffect(() => {
+    // 自动开始检测
+    handleDetectAudioSources();
+  }, [handleDetectAudioSources]);
 
   const steps = [
     {

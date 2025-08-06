@@ -151,37 +151,6 @@ export function EnhancedInterviewMain() {
     }
   };
 
-  // 生成面试总结
-  const generateInterviewSummary = async (segments: any[]) => {
-    try {
-      setIsGeneratingSummary(true);
-      console.log('🤖 开始生成GPT-4o-mini面试总结...');
-      
-      // 动态导入GPT-4服务
-      const { GPT4InterviewSummaryService } = await import('@/services/interview-summary/gpt4-summary-service');
-      const summaryService = new GPT4InterviewSummaryService();
-      
-      // 生成总结
-      const summary = await summaryService.generateInterviewSummary(segments, {
-        duration: Math.floor(recordingTime / 60),
-        participantCount: 2,
-        totalWords: segments.reduce((sum: number, seg: any) => sum + (seg.wordCount || 0), 0),
-        questionCount: segments.filter((seg: any) => seg.englishText.includes('?')).length,
-        interactionCount: segments.length
-      }, {
-        candidateName: candidateName.trim() || 'unknown',
-        position: position.trim() || '未指定岗位'
-      });
-      
-      setInterviewSummary(summary);
-      console.log('✅ 面试总结生成完成');
-      
-    } catch (error) {
-      console.error('❌ 生成面试总结失败:', error);
-    } finally {
-      setIsGeneratingSummary(false);
-    }
-  };
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -471,7 +440,7 @@ export function EnhancedInterviewMain() {
                   准备开始面试转录
                 </h3>
                 <p className="text-gray-500 mb-6">
-                  点击"开始面试"按钮开始实时语音转录和翻译
+                  点击&ldquo;开始面试&rdquo;按钮开始实时语音转录和翻译
                 </p>
                 <div className="text-sm text-gray-400 space-y-1">
                   <p>• 支持英文语音实时转录</p>

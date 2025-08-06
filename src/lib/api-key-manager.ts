@@ -51,7 +51,7 @@ export class ApiKeyManager {
           apiKey = config.openaiApiKey;
         }
       }
-    } catch (e) {
+    } catch {
       // 不输出console.log以避免SSR不匹配
     }
     

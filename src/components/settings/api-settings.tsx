@@ -17,7 +17,6 @@ import {
   Loader2
 } from 'lucide-react';
 import { useInterviewStore } from '@/store/interview-store';
-import { getTranslationService } from '@/services';
 
 interface ApiSettingsProps {
   className?: string;
@@ -210,7 +209,7 @@ export function ApiSettings({ className }: ApiSettingsProps) {
           <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
             <li>访问 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline">OpenAI API Keys 页面</a></li>
             <li>登录你的 OpenAI 账户</li>
-            <li>点击 "Create new secret key"</li>
+            <li>点击 &ldquo;Create new secret key&rdquo;</li>
             <li>复制生成的 API Key 并粘贴到上方</li>
             <li>确保账户有足够的余额用于 API 调用</li>
           </ol>

@@ -6,7 +6,6 @@ import { InterviewSettings } from '@/components/interview/interview-settings';
 import { InterviewDetailView } from '@/components/interview/interview-detail-view';
 import { StreamingErrorBoundary } from '@/components/streaming/streaming-error-boundary';
 import { EnhancedInterviewMain } from '@/components/interview/enhanced-interview-main';
-import { useWAVStreamingStore } from '@/store/wav-streaming-store';
 import { useInterviewHistoryStore } from '@/store/interview-history-store';
 import { EnhancedInterviewSession } from '@/types/enhanced-interview';
 import { Mic, History, Settings } from 'lucide-react';

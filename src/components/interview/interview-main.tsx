@@ -117,7 +117,7 @@ export function InterviewMain() {
           <h2 className="text-lg font-semibold mb-4">使用说明</h2>
           <div className="space-y-3 text-sm text-gray-600">
             <p>
-              <strong>1. 点击"开始录音"</strong> - 开启实时语音转录功能
+              <strong>1. 点击&ldquo;开始录音&rdquo;</strong> - 开启实时语音转录功能
             </p>
             <p>
               <strong>2. 对着麦克风说英文</strong> - 系统会自动识别并转录
