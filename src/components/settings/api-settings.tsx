@@ -33,11 +33,17 @@ export function ApiSettings({ className }: ApiSettingsProps) {
   const { config, updateConfig } = useInterviewStore();
 
   useEffect(() => {
-    // 从localStorage或配置中加载API密钥
-    const savedApiKey = localStorage.getItem('openai_api_key') || config.openaiApiKey;
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      testConnection(savedApiKey);
+    // 从localStorage或配置中加载API密钥（仅在客户端）
+    if (typeof window !== 'undefined') {
+      try {
+        const savedApiKey = localStorage.getItem('openai_api_key') || config.openaiApiKey;
+        if (savedApiKey) {
+          setApiKey(savedApiKey);
+          testConnection(savedApiKey);
+        }
+      } catch (error) {
+        console.warn('加载API密钥失败:', error);
+      }
     }
   }, [config.openaiApiKey]);
 
@@ -76,7 +82,13 @@ export function ApiSettings({ className }: ApiSettingsProps) {
     }
 
     // 保存到localStorage和全局配置
-    localStorage.setItem('openai_api_key', apiKey);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('openai_api_key', apiKey);
+      } catch (error) {
+        console.warn('保存API密钥到localStorage失败:', error);
+      }
+    }
     updateConfig({ openaiApiKey: apiKey });
     
     // 测试新的API密钥

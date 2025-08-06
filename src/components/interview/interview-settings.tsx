@@ -29,11 +29,17 @@ export function InterviewSettings() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // 从localStorage加载API密钥
-    const savedApiKey = localStorage.getItem('openai_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      setConnectionStatus('connected');
+    // 从localStorage加载API密钥（仅在客户端）
+    if (typeof window !== 'undefined') {
+      try {
+        const savedApiKey = localStorage.getItem('openai_api_key');
+        if (savedApiKey) {
+          setApiKey(savedApiKey);
+          setConnectionStatus('connected');
+        }
+      } catch (error) {
+        console.warn('加载API密钥失败:', error);
+      }
     }
   }, []);
 
@@ -73,7 +79,13 @@ export function InterviewSettings() {
     setIsSaving(true);
     try {
       // 保存到localStorage
-      localStorage.setItem('openai_api_key', apiKey.trim());
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('openai_api_key', apiKey.trim());
+        } catch (error) {
+          console.warn('保存API密钥到localStorage失败:', error);
+        }
+      }
       
       // 测试连接
       await testApiConnection();

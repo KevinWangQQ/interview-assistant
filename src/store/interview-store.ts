@@ -614,11 +614,13 @@ export const useInterviewStore = create<InterviewStore>()(
         
         // 保存到localStorage（延迟到客户端）
         setTimeout(() => {
-          try {
-            const newConfig = { ...get().config, ...configUpdate };
-            localStorage.setItem('interview-assistant-config', JSON.stringify(newConfig));
-          } catch (error) {
-            console.warn('Failed to save config to localStorage:', error);
+          if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+            try {
+              const newConfig = { ...get().config, ...configUpdate };
+              localStorage.setItem('interview-assistant-config', JSON.stringify(newConfig));
+            } catch (error) {
+              console.warn('Failed to save config to localStorage:', error);
+            }
           }
         }, 0);
       },
@@ -931,14 +933,16 @@ export const useInitializeConfig = () => {
   const updateConfig = useInterviewStore(state => state.updateConfig);
   
   React.useEffect(() => {
-    try {
-      const savedConfig = localStorage.getItem('interview-assistant-config');
-      if (savedConfig) {
-        const config = JSON.parse(savedConfig);
-        updateConfig(config);
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        const savedConfig = localStorage.getItem('interview-assistant-config');
+        if (savedConfig) {
+          const config = JSON.parse(savedConfig);
+          updateConfig(config);
+        }
+      } catch (error) {
+        console.warn('Failed to load saved config:', error);
       }
-    } catch (error) {
-      console.warn('Failed to load saved config:', error);
     }
   }, [updateConfig]);
 };

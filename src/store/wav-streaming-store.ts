@@ -6,10 +6,12 @@ import { EnhancedWAVStreamingTranscriptionService } from '@/services/streaming/e
 
 interface WAVStreamingState {
   isActive: boolean;
+  isPaused: boolean;
   isProcessing: boolean;
   currentText: string;
   currentTranslation: string;
   segments: any[];
+  completedSegments: any[]; // 已完成的面试段落
   streamingService: EnhancedWAVStreamingTranscriptionService | null;
   error: string | null;
   lastSavedTimestamp: number | null;
@@ -17,6 +19,8 @@ interface WAVStreamingState {
     candidateName: string;
     position: string;
   } | null;
+  interviewSummary: any | null; // 面试总结
+  isGeneratingSummary: boolean; // 是否正在生成总结
   config: {
     chunkInterval: number;
     translationDelay: number;
@@ -26,6 +30,8 @@ interface WAVStreamingState {
 interface WAVStreamingActions {
   startStreaming: (interviewInfo?: { candidateName: string; position: string }) => Promise<void>;
   stopStreaming: () => Promise<void>;
+  pauseStreaming: () => Promise<void>;
+  resumeStreaming: () => Promise<void>;
   generateSummaryAndSave: () => Promise<any>;
   saveInterviewSession: () => Promise<void>;
   handleTranscriptionUpdate: (data: any) => void;
@@ -41,14 +47,18 @@ type WAVStreamingStore = WAVStreamingState & WAVStreamingActions;
 
 const initialState: WAVStreamingState = {
   isActive: false,
+  isPaused: false,
   isProcessing: false,
   currentText: '',
   currentTranslation: '',
   segments: [],
+  completedSegments: [],
   streamingService: null,
   error: null,
   lastSavedTimestamp: null,
   interviewInfo: null,
+  interviewSummary: null,
+  isGeneratingSummary: false,
   config: {
     chunkInterval: 3000,
     translationDelay: 1000
@@ -64,10 +74,21 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
         try {
           console.log('🎵 启动WAV流式处理', interviewInfo);
           
-          const { config } = get();
+          // 清理之前的状态，开始全新的面试
+          set({
+            currentText: '',
+            currentTranslation: '',
+            segments: [],
+            completedSegments: [],
+            isProcessing: false,
+            error: null,
+            lastSavedTimestamp: null,
+            interviewInfo,
+            interviewSummary: null,
+            isGeneratingSummary: false
+          });
           
-          // 保存面试信息
-          set({ interviewInfo });
+          const { config } = get();
           
           const streamingService = new EnhancedWAVStreamingTranscriptionService({
             chunkInterval: config.chunkInterval,
@@ -111,14 +132,29 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
 
       stopStreaming: async () => {
         try {
-          const { streamingService, segments } = get();
+          const { streamingService, segments, currentText, currentTranslation } = get();
           
           if (streamingService) {
             await streamingService.stopStreaming();
           }
           
+          // 将segments和当前活跃内容合并到completedSegments
+          let allSegments = [...segments];
+          if (currentText && currentTranslation) {
+            allSegments.push({
+              id: `final-segment-${Date.now()}`,
+              timestamp: new Date(),
+              englishText: currentText,
+              chineseText: currentTranslation,
+              speaker: 'candidate',
+              confidence: 0.9,
+              wordCount: currentText.split(' ').length,
+              isComplete: true
+            });
+          }
+          
           // 🏗️ 自动保存面试会话（即使没有转录内容也保存基础记录）
-          console.log('🔍 停止录制检查 - segments数量:', segments.length);
+          console.log('🔍 停止录制检查 - segments数量:', allSegments.length);
           try {
             console.log('💾 开始自动保存面试会话...');
             await get().saveInterviewSession();
@@ -133,6 +169,7 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
             isProcessing: false,
             currentText: '',
             currentTranslation: '',
+            completedSegments: allSegments, // 保存完成的段落到store
             error: null
             // 注意：不清空 segments，保留转录数据供后续使用
           });
@@ -140,6 +177,46 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           console.log('✅ WAV流式处理已停止');
         } catch (error) {
           console.error('❌ 停止WAV流式处理失败:', error);
+        }
+      },
+
+      pauseStreaming: async () => {
+        try {
+          const { streamingService } = get();
+          
+          if (streamingService) {
+            await streamingService.pauseStreaming();
+          }
+          
+          set({ 
+            isPaused: true,
+            isProcessing: false
+          });
+          
+          console.log('⏸️ WAV流式处理已暂停');
+        } catch (error) {
+          console.error('❌ 暂停WAV流式处理失败:', error);
+          get().setError(`暂停失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+      },
+
+      resumeStreaming: async () => {
+        try {
+          const { streamingService } = get();
+          
+          if (streamingService) {
+            await streamingService.resumeStreaming();
+          }
+          
+          set({ 
+            isPaused: false,
+            isProcessing: true
+          });
+          
+          console.log('▶️ WAV流式处理已恢复');
+        } catch (error) {
+          console.error('❌ 恢复WAV流式处理失败:', error);
+          get().setError(`恢复失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
       },
 
@@ -222,7 +299,9 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
               id: `recording-${Date.now()}`,
               startTime: new Date(Date.now() - segments.length * 30000), // 估算开始时间
               endTime: new Date(),
-              duration: segments.length * 30, // 估算时长（秒）
+              duration: segments.length > 0 ? 
+                Math.max(...segments.map((seg: any) => seg.endTime || 0)) || 
+                segments.length * 30 : 0, // 使用实际时长或估算时长
               status: 'completed' as const,
               audioConfig: {
                 microphoneEnabled: true,
@@ -256,27 +335,46 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
             rawTranscriptionText: segments.map((seg: any) => seg.text || seg.englishText || '').join(' '),
             rawTranslationText: segments.map((seg: any) => seg.translation || seg.chineseText || '').join(' '),
             statistics: {
-              totalWords: segments.reduce((count: number, seg: any) => 
-                count + (seg.text || seg.englishText || '').split(' ').length, 0),
-              totalQuestions: segments.filter((seg: any) => 
-                (seg.text || seg.englishText || '').includes('?')).length,
-              speakerChangeCount: new Set(segments.map((seg: any) => seg.speaker)).size,
+              totalWords: segments.reduce((count: number, seg: any) => {
+                const text = seg.text || seg.englishText || '';
+                return count + (text ? text.split(/\s+/).filter((word: string) => word.length > 0).length : 0);
+              }, 0),
+              totalQuestions: segments.filter((seg: any) => {
+                const text = seg.text || seg.englishText || '';
+                return text.includes('?');
+              }).length,
+              speakerChangeCount: Math.max(1, new Set(segments.map((seg: any) => seg.speaker || 'unknown')).size),
               averageSegmentDuration: segments.length > 0 ? 
-                segments.reduce((sum: number, seg: any) => sum + (seg.endTime - seg.startTime || 30), 0) / segments.length : 0,
+                segments.reduce((sum: number, seg: any) => {
+                  const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                  return sum + Math.max(duration > 0 ? duration : 30, 30);
+                }, 0) / segments.length : 30,
               longestSegmentDuration: segments.length > 0 ? 
-                Math.max(...segments.map((seg: any) => seg.endTime - seg.startTime || 30)) : 0,
+                Math.max(...segments.map((seg: any) => {
+                  const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                  return Math.max(duration > 0 ? duration : 30, 30);
+                })) : 30,
               speakingTimeDistribution: {
                 interviewer: segments.filter((seg: any) => seg.speaker === 'interviewer')
-                  .reduce((sum: number, seg: any) => sum + (seg.endTime - seg.startTime || 30), 0),
+                  .reduce((sum: number, seg: any) => {
+                    const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                    return sum + Math.max(duration > 0 ? duration : 30, 30);
+                  }, 0),
                 candidate: segments.filter((seg: any) => seg.speaker === 'candidate')
-                  .reduce((sum: number, seg: any) => sum + (seg.endTime - seg.startTime || 30), 0),
+                  .reduce((sum: number, seg: any) => {
+                    const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                    return sum + Math.max(duration > 0 ? duration : 30, 30);
+                  }, 0),
                 unknown: segments.filter((seg: any) => !seg.speaker || seg.speaker === 'unknown')
-                  .reduce((sum: number, seg: any) => sum + (seg.endTime - seg.startTime || 30), 0)
+                  .reduce((sum: number, seg: any) => {
+                    const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                    return sum + Math.max(duration > 0 ? duration : 30, 30);
+                  }, 0)
               },
               interactionMetrics: {
                 responseTime: [],
-                questionDepth: 3,
-                engagementScore: 0.7
+                questionDepth: Math.max(1, Math.min(segments.length, 5)),
+                engagementScore: Math.min(0.9, 0.5 + (segments.length * 0.05))
               }
             },
             metadata: {
@@ -308,10 +406,90 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
 
       generateSummaryAndSave: async () => {
         try {
-          const { segments, interviewInfo } = get();
-          if (segments.length === 0) return;
+          const { segments, completedSegments, interviewInfo } = get();
+          const allSegments = completedSegments.length > 0 ? completedSegments : segments;
+          
+          if (allSegments.length === 0) {
+            console.log('⚠️ 无面试内容，跳过总结生成');
+            return;
+          }
 
-          console.log('📊 开始生成面试总结...');
+          // 计算面试时长和有效性
+          const totalDuration = allSegments.length > 0 ? 
+            Math.max(...allSegments.map((seg: any) => seg.endTime || 30)) : 0;
+          const totalWords = allSegments.reduce((count: number, seg: any) => {
+            const text = seg.englishText || seg.text || '';
+            return count + (text ? text.split(/\s+/).filter((word: string) => word.length > 0).length : 0);
+          }, 0);
+
+          console.log('📊 面试数据检查:', {
+            duration: `${Math.floor(totalDuration / 60)}分${totalDuration % 60}秒`,
+            totalWords,
+            segments: allSegments.length
+          });
+
+          // 判断是否为过短面试（少于2分钟或词数少于30）
+          const isShortInterview = totalDuration < 120 || totalWords < 30;
+          
+          if (isShortInterview) {
+            console.log('⚠️ 检测到过短面试，生成简化总结');
+            
+            // 生成过短面试的简化总结
+            const shortInterviewSummary = {
+              id: `short-summary-${Date.now()}`,
+              timestamp: new Date(),
+              metadata: {
+                duration: Math.floor(totalDuration / 60),
+                totalWords,
+                interactionCount: allSegments.length,
+                questionCount: 0,
+                participantCount: 2
+              },
+              executiveSummary: `面试时长过短（${Math.floor(totalDuration / 60)}分${totalDuration % 60}秒，共${totalWords}词），无法进行有效的综合评估。建议安排更充分的面试时间（至少15-30分钟）以全面了解候选人能力。`,
+              candidatePerformance: {
+                overall: `由于面试时间较短，难以全面评估候选人表现。建议延长面试时间获取更多信息。`,
+                strengths: totalWords > 0 ? ["能够进行基本交流"] : [],
+                weaknesses: ["面试时间不足，信息收集有限"],
+                communicationSkills: "时间不足，无法充分评估",
+                technicalSkills: "时间不足，无法充分评估"
+              },
+              keyInsights: {
+                standoutMoments: [],
+                concerningAreas: ["面试时间过短", "信息收集不充分"],
+                improvementSuggestions: [
+                  "安排至少15-30分钟的正式面试时间",
+                  "准备结构化的面试问题",
+                  "确保音频设备工作正常，获得清晰的录音"
+                ]
+              },
+              recommendation: {
+                decision: 'neutral' as const,
+                reasoning: "由于面试时间过短，无法做出可靠的录用建议。需要重新安排更充分的面试来全面评估候选人能力。",
+                nextSteps: [
+                  "重新安排15-30分钟的正式面试",
+                  "准备针对岗位的具体面试问题",
+                  "确保面试环境和设备符合要求"
+                ]
+              },
+              sourceSegments: allSegments.map((seg: any) => seg.id),
+              processingStats: {
+                totalChunks: 1,
+                processingTime: 0,
+                confidenceScore: 0.1
+              }
+            };
+
+            set({ 
+              interviewSummary: shortInterviewSummary,
+              isGeneratingSummary: false 
+            });
+            
+            console.log('✅ 过短面试简化总结生成完成');
+            return shortInterviewSummary;
+          }
+
+          console.log('📊 开始生成完整面试总结...');
+          set({ isGeneratingSummary: true });
           
           // 导入总结服务
           const { GPT4InterviewSummaryService } = await import('@/services/interview-summary/gpt4-summary-service');
@@ -322,12 +500,21 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           
           // 生成总结（传入面试信息）
           const summary = await summaryService.generateInterviewSummary(
-            segments, 
+            allSegments, 
             undefined, 
             interviewInfo || undefined
           );
           
-          // 创建面试会话记录
+          // 保存总结到store
+          set({ 
+            interviewSummary: summary,
+            isGeneratingSummary: false 
+          });
+          
+          // 创建面试会话记录 - 使用正确的统计计算
+          const sessionTotalDuration = allSegments.length > 0 ? 
+            Math.max(...allSegments.map((seg: any) => seg.endTime || 30)) : 0;
+          
           const interviewSession = {
             id: `interview-${Date.now()}`,
             timestamp: new Date(),
@@ -338,9 +525,9 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
             company: '',
             recordingSession: {
               id: `recording-${Date.now()}`,
-              startTime: new Date(),
+              startTime: new Date(Date.now() - (sessionTotalDuration * 1000)),
               endTime: new Date(),
-              duration: 0,
+              duration: sessionTotalDuration,
               status: 'completed' as const,
               audioConfig: {
                 microphoneEnabled: true,
@@ -352,25 +539,51 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
               audioQualityHistory: [],
               averageAudioQuality: 0.8
             },
-            segments: segments,
-            rawTranscriptionText: segments.map((seg: any) => seg.text).join(' '),
-            rawTranslationText: segments.map((seg: any) => seg.translation).join(' '),
+            segments: allSegments,
+            rawTranscriptionText: allSegments.map((seg: any) => seg.englishText || seg.text || '').join(' '),
+            rawTranslationText: allSegments.map((seg: any) => seg.chineseText || seg.translation || '').join(' '),
             summary: summary,
             statistics: {
-              totalWords: segments.reduce((sum: number, seg: any) => sum + (seg.wordCount || 0), 0),
-              totalQuestions: 0,
-              speakerChangeCount: 0,
-              averageSegmentDuration: 0,
-              longestSegmentDuration: 0,
+              totalWords: allSegments.reduce((count: number, seg: any) => {
+                const text = seg.englishText || seg.text || '';
+                return count + (text ? text.split(/\s+/).filter((word: string) => word.length > 0).length : 0);
+              }, 0),
+              totalQuestions: allSegments.filter((seg: any) => {
+                const text = seg.englishText || seg.text || '';
+                return text.includes('?');
+              }).length,
+              speakerChangeCount: Math.max(1, new Set(allSegments.map((seg: any) => seg.speaker || 'unknown')).size),
+              averageSegmentDuration: allSegments.length > 0 ? 
+                allSegments.reduce((sum: number, seg: any) => {
+                  const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                  return sum + Math.max(duration > 0 ? duration : 30, 30);
+                }, 0) / allSegments.length : 30,
+              longestSegmentDuration: allSegments.length > 0 ? 
+                Math.max(...allSegments.map((seg: any) => {
+                  const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                  return Math.max(duration > 0 ? duration : 30, 30);
+                })) : 30,
               speakingTimeDistribution: {
-                interviewer: 0,
-                candidate: 0,
-                unknown: 0
+                interviewer: allSegments.filter((seg: any) => seg.speaker === 'interviewer')
+                  .reduce((sum: number, seg: any) => {
+                    const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                    return sum + Math.max(duration > 0 ? duration : 30, 30);
+                  }, 0),
+                candidate: allSegments.filter((seg: any) => seg.speaker === 'candidate')
+                  .reduce((sum: number, seg: any) => {
+                    const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                    return sum + Math.max(duration > 0 ? duration : 30, 30);
+                  }, 0),
+                unknown: allSegments.filter((seg: any) => !seg.speaker || seg.speaker === 'unknown')
+                  .reduce((sum: number, seg: any) => {
+                    const duration = (seg.endTime || 0) - (seg.startTime || 0);
+                    return sum + Math.max(duration > 0 ? duration : 30, 30);
+                  }, 0)
               },
               interactionMetrics: {
                 responseTime: [],
-                questionDepth: 0,
-                engagementScore: 0
+                questionDepth: Math.max(1, Math.min(allSegments.length, 5)),
+                engagementScore: Math.min(0.9, 0.5 + (allSegments.length * 0.05))
               }
             },
             tags: [],
@@ -394,6 +607,7 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           
         } catch (error) {
           console.error('❌ 生成总结失败:', error);
+          set({ isGeneratingSummary: false });
           get().setError(`生成总结失败: ${error instanceof Error ? error.message : '未知错误'}`);
           throw error;
         }

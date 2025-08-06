@@ -367,7 +367,7 @@ export class EnhancedWAVStreamingTranscriptionService {
       await this.setupPCMRecording();
       
       this.isRecording = true;
-      this.startRecordingLoop();
+      this.startRecordingTimers();
       
       // 发出音频源变更事件
       this.emitEvent('audio_source_changed', {
@@ -446,17 +446,6 @@ export class EnhancedWAVStreamingTranscriptionService {
     return sum / audioData.length;
   }
 
-  // 🔄 录音循环（复用原有逻辑）
-  private startRecordingLoop(): void {
-    this.recordTimer = setInterval(async () => {
-      try {
-        await this.processAudioChunks();
-      } catch (error) {
-        console.error('❌ 录音循环错误:', error);
-        this.emitEvent('error', { error, message: '录音处理错误' });
-      }
-    }, this.config.chunkInterval);
-  }
 
   // 📝 处理音频块 - 改进版：避免音频遗漏  
   private async processAudioChunks(): Promise<void> {
@@ -772,6 +761,88 @@ export class EnhancedWAVStreamingTranscriptionService {
     this.isSilent = false;
     
     console.log('✅ 增强版WAV流式转录服务已停止');
+  }
+
+  // ⏸️ 暂停流式转录
+  async pauseStreaming(): Promise<void> {
+    console.log('⏸️ 暂停增强版WAV流式转录服务');
+    
+    if (!this.isRecording) {
+      console.warn('⚠️ 服务未在录制状态，无法暂停');
+      return;
+    }
+    
+    // 暂停录制但保持流状态
+    this.isRecording = false;
+    
+    // 暂停定时器
+    if (this.recordTimer) {
+      clearInterval(this.recordTimer);
+      this.recordTimer = null;
+    }
+    
+    if (this.translationTimer) {
+      clearTimeout(this.translationTimer);
+      this.translationTimer = null;
+    }
+    
+    if (this.qualityTimer) {
+      clearTimeout(this.qualityTimer);
+      this.qualityTimer = null;
+    }
+    
+    console.log('✅ 增强版WAV流式转录服务已暂停');
+  }
+
+  // ▶️ 恢复流式转录
+  async resumeStreaming(): Promise<void> {
+    console.log('▶️ 恢复增强版WAV流式转录服务');
+    
+    if (this.isRecording) {
+      console.warn('⚠️ 服务已在录制状态，无需恢复');
+      return;
+    }
+    
+    if (!this.combinedStream) {
+      console.error('❌ 无活跃音频流，无法恢复录制');
+      throw new Error('无活跃音频流，请重新开始录制');
+    }
+    
+    // 恢复录制状态
+    this.isRecording = true;
+    
+    // 重新启动定时器
+    this.startRecordingTimers();
+    
+    console.log('✅ 增强版WAV流式转录服务已恢复');
+  }
+
+  // ⏰ 启动录制定时器
+  private startRecordingTimers(): void {
+    // 启动录音循环
+    this.recordTimer = setInterval(async () => {
+      try {
+        await this.processAudioChunks();
+      } catch (error) {
+        console.error('❌ 录音循环错误:', error);
+        this.emitEvent('error', { error, message: '录音处理错误' });
+      }
+    }, this.config.chunkInterval);
+
+    // 启动音频质量监控
+    this.qualityTimer = setInterval(() => {
+      if (!this.qualityAnalyser || !this.qualityDataArray || !this.isRecording) return;
+      
+      this.qualityAnalyser.getByteFrequencyData(this.qualityDataArray);
+      
+      const sum = this.qualityDataArray.reduce((a, b) => a + b, 0);
+      const average = sum / this.qualityDataArray.length;
+      const volume = average / 255;
+      
+      // 更新音频源质量
+      this.microphoneSource.quality = volume;
+      this.systemAudioSource.quality = volume;
+    }, 500);
   }
 
   // 📡 事件系统（复用原有逻辑）

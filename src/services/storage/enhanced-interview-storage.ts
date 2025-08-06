@@ -42,10 +42,49 @@ export class EnhancedInterviewStorageService {
     }
   }
 
+  // 🔒 安全的localStorage访问器
+  private safeLocalStorageGetItem(key: string): string | null {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return null;
+    }
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      console.warn('localStorage访问失败:', error);
+      return null;
+    }
+  }
+
+  private safeLocalStorageSetItem(key: string, value: string): boolean {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return false;
+    }
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      console.warn('localStorage写入失败:', error);
+      return false;
+    }
+  }
+
+  private safeLocalStorageRemoveItem(key: string): boolean {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return false;
+    }
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      console.warn('localStorage删除失败:', error);
+      return false;
+    }
+  }
+
   // ⚙️ 加载配置
   private loadConfiguration(): StorageConfiguration {
     try {
-      const stored = localStorage.getItem(this.CONFIG_KEY);
+      const stored = this.safeLocalStorageGetItem(this.CONFIG_KEY);
       const defaultConfig: StorageConfiguration = {
         maxSessions: 100,
         maxSessionSize: 50, // 50MB
@@ -131,7 +170,7 @@ export class EnhancedInterviewStorageService {
   // 📋 获取所有会话
   getAllSessions(): EnhancedInterviewSession[] {
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const stored = this.safeLocalStorageGetItem(this.STORAGE_KEY);
       if (!stored) return [];
       
       const sessions = JSON.parse(stored);
@@ -547,12 +586,12 @@ export class EnhancedInterviewStorageService {
   }
 
   private saveSessionsToStorage(sessions: EnhancedInterviewSession[]): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sessions));
+    this.safeLocalStorageSetItem(this.STORAGE_KEY, JSON.stringify(sessions));
   }
 
   private getStorageSize(): number {
     try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
+      const data = this.safeLocalStorageGetItem(this.STORAGE_KEY);
       return data ? (data.length * 2) / (1024 * 1024) : 0; // 粗略估算MB
     } catch {
       return 0;
@@ -571,7 +610,7 @@ export class EnhancedInterviewStorageService {
         totalSessions: this.getAllSessions().length,
         storageSize: this.getStorageSize()
       };
-      localStorage.setItem(this.STATS_KEY, JSON.stringify(stats));
+      this.safeLocalStorageSetItem(this.STATS_KEY, JSON.stringify(stats));
     } catch (error) {
       console.error('❌ 更新存储统计失败:', error);
     }

@@ -14,7 +14,9 @@ import {
   Square,
   Clock,
   User,
-  Briefcase
+  Briefcase,
+  Pause,
+  Play
 } from 'lucide-react';
 import { useWAVStreamingStore } from '@/store/wav-streaming-store';
 
@@ -29,27 +31,49 @@ export function EnhancedInterviewMain() {
 
   const {
     isActive,
+    isPaused,
     isProcessing,
     currentText,
     currentTranslation,
     segments: storeSegments,
+    completedSegments: storeCompletedSegments,
+    interviewInfo,
+    interviewSummary: storeInterviewSummary,
+    isGeneratingSummary: storeIsGeneratingSummary,
     error,
     startStreaming,
     stopStreaming,
+    pauseStreaming,
+    resumeStreaming,
     generateSummaryAndSave,
     clearError
   } = useWAVStreamingStore();
 
-  // 录制时间计时器
+  // 组件挂载时从store恢复状态
+  useEffect(() => {
+    if (interviewInfo) {
+      setCandidateName(interviewInfo.candidateName);
+      setPosition(interviewInfo.position);
+    }
+  }, [interviewInfo]);
+
+  // 同步store状态到本地状态
+  useEffect(() => {
+    setCompletedSegments(storeCompletedSegments);
+    setInterviewSummary(storeInterviewSummary);
+    setIsGeneratingSummary(storeIsGeneratingSummary);
+  }, [storeCompletedSegments, storeInterviewSummary, storeIsGeneratingSummary]);
+
+  // 录制时间计时器 - 修复暂停时计时器问题
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isActive) {
+    if (isActive && !isPaused) {
       interval = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isActive, isPaused]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -129,7 +153,7 @@ export function EnhancedInterviewMain() {
   const generateInterviewSummary = async (segments: any[]) => {
     try {
       setIsGeneratingSummary(true);
-      console.log('🤖 开始生成GPT-4o面试总结...');
+      console.log('🤖 开始生成GPT-4o-mini面试总结...');
       
       // 动态导入GPT-4服务
       const { GPT4InterviewSummaryService } = await import('@/services/interview-summary/gpt4-summary-service');
@@ -187,7 +211,6 @@ export function EnhancedInterviewMain() {
                   <Input
                     id="candidateName"
                     type="text"
-                    placeholder="可留空，默认为 unknown"
                     value={candidateName}
                     onChange={(e) => setCandidateName(e.target.value)}
                     className="w-full"
@@ -198,14 +221,16 @@ export function EnhancedInterviewMain() {
                     <Briefcase className="h-4 w-4" />
                     面试岗位
                   </Label>
-                  <Input
+                  <select
                     id="position"
-                    type="text"
-                    placeholder="可留空"
                     value={position}
                     onChange={(e) => setPosition(e.target.value)}
-                    className="w-full"
-                  />
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">请选择岗位</option>
+                    <option value="product_manager_software">产品经理（软件）</option>
+                    <option value="product_manager_hardware">产品经理（硬件）</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -264,14 +289,37 @@ export function EnhancedInterviewMain() {
                   开始新面试
                 </Button>
               ) : (
-                <Button 
-                  onClick={handleStopRecording}
-                  size="lg"
-                  variant="destructive"
-                >
-                  <Square className="w-5 h-5 mr-2" />
-                  结束面试
-                </Button>
+                <div className="flex items-center gap-3">
+                  {!isPaused ? (
+                    <Button 
+                      onClick={pauseStreaming}
+                      size="lg"
+                      variant="outline"
+                      className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      <Pause className="w-5 h-5 mr-2" />
+                      暂停
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={resumeStreaming}
+                      size="lg"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Play className="w-5 h-5 mr-2" />
+                      继续
+                    </Button>
+                  )}
+                  
+                  <Button 
+                    onClick={handleStopRecording}
+                    size="lg"
+                    variant="destructive"
+                  >
+                    <Square className="w-5 h-5 mr-2" />
+                    结束面试
+                  </Button>
+                </div>
               )}
               
               {isGeneratingSummary && (
@@ -296,7 +344,7 @@ export function EnhancedInterviewMain() {
             {interviewSummary && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                  🤖 GPT-4o 面试总结
+                  🤖 GPT-4o-mini 面试总结
                   <span className="text-sm text-blue-600 font-normal">
                     ({Math.floor(recordingTime / 60)}分钟面试)
                   </span>
@@ -348,47 +396,94 @@ export function EnhancedInterviewMain() {
               </div>
             )}
             
-            {/* 显示已完成的分段 */}
+            {/* 显示已完成的分段 - 优化突出显示 */}
             {(isActive ? storeSegments : completedSegments).map((segment: any) => (
-              <div key={segment.id} className="bg-white rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground mb-2">
-                  {new Date(segment.timestamp).toLocaleTimeString()}
+              <div key={segment.id} className="bg-white rounded-xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(segment.timestamp).toLocaleTimeString()}
+                  </div>
                   {segment.speaker && (
-                    <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      segment.speaker === 'interviewer' 
+                        ? 'bg-purple-100 text-purple-700' 
+                        : 'bg-green-100 text-green-700'
+                    }`}>
                       {segment.speaker === 'interviewer' ? '面试官' : '候选人'}
                     </span>
                   )}
                 </div>
                 
-                <div className="space-y-3">
-                  <div className="text-gray-900 leading-relaxed">
-                    {segment.englishText}
+                <div className="space-y-4">
+                  {/* 英文原声文本 - 突出显示 */}
+                  <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-blue-700 uppercase tracking-wider">
+                        英文原声
+                      </span>
+                    </div>
+                    <div className="text-gray-900 font-medium text-lg leading-relaxed">
+                      {segment.englishText}
+                    </div>
                   </div>
                   
-                  <div className="border-l-4 border-blue-200 pl-4 text-gray-700 leading-relaxed">
-                    {segment.chineseText}
+                  {/* 中文翻译 - 突出显示 */}
+                  <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-400">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs font-medium text-green-700 uppercase tracking-wider">
+                        中文翻译
+                      </span>
+                    </div>
+                    <div className="text-gray-800 text-lg leading-relaxed">
+                      {segment.chineseText}
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
             
-            {/* 显示当前进行中的转录 */}
+            {/* 显示当前进行中的转录 - 优化突出显示 */}
             {(currentText || currentTranslation) && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="text-xs text-yellow-600 mb-2">
-                  实时转录中...
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl shadow-lg p-6 animate-pulse">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  </div>
+                  <span className="text-sm font-semibold text-amber-700 uppercase tracking-wider">
+                    实时转录中
+                  </span>
                 </div>
                 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {currentText && (
-                    <div className="text-gray-900 leading-relaxed">
-                      {currentText}
+                    <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-medium text-blue-700 uppercase tracking-wider">
+                          英文原声
+                        </span>
+                      </div>
+                      <div className="text-gray-900 font-medium text-lg leading-relaxed">
+                        {currentText}
+                      </div>
                     </div>
                   )}
                   
                   {currentTranslation && (
-                    <div className="border-l-4 border-yellow-300 pl-4 text-gray-700 leading-relaxed">
-                      {currentTranslation}
+                    <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-400">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-medium text-green-700 uppercase tracking-wider">
+                          中文翻译
+                        </span>
+                      </div>
+                      <div className="text-gray-800 text-lg leading-relaxed">
+                        {currentTranslation}
+                      </div>
                     </div>
                   )}
                 </div>

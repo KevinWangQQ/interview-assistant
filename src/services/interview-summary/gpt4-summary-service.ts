@@ -2,6 +2,12 @@
 
 import { InterviewTextChunker, TextChunk } from './text-chunking';
 import { TranscriptionSegment } from '@/utils/smart-segmentation';
+import { 
+  matchPositionTemplate, 
+  PositionTemplate, 
+  AssessmentDimension,
+  calculateWeightedScore 
+} from '@/config/position-assessment-templates';
 
 interface InterviewSummaryConfig {
   model: string;
@@ -17,6 +23,37 @@ interface InterviewMetadata {
   totalWords: number;
   questionCount: number;
   interactionCount: number;
+  candidateName?: string;
+  position?: string;
+}
+
+// 🎯 维度评估结果
+interface DimensionAssessment {
+  name: string;
+  score: number; // 1-10分
+  evidence: string[]; // 支撑证据
+  insufficientInfo: boolean; // 是否信息不足
+  reasoning: string; // 评分理由
+}
+
+// 📊 岗位匹配评估
+interface PositionMatchAssessment {
+  matchedTemplate: PositionTemplate;
+  professionalAssessment: {
+    dimensions: DimensionAssessment[];
+    overallScore: number;
+    summary: string;
+  };
+  personalAssessment: {
+    dimensions: DimensionAssessment[];
+    overallScore: number;
+    summary: string;
+  };
+  overallFit: {
+    score: number;
+    reasoning: string;
+    recommendations: string[];
+  };
 }
 
 interface InterviewSummary {
@@ -26,6 +63,11 @@ interface InterviewSummary {
   
   // 核心总结内容
   executiveSummary: string;
+  
+  // 🎯 新增：岗位匹配评估
+  positionAssessment?: PositionMatchAssessment;
+  
+  // 传统评估（保持兼容性）
   candidatePerformance: {
     overall: string;
     strengths: string[];
@@ -76,7 +118,7 @@ export class GPT4InterviewSummaryService {
 
   constructor(config: Partial<InterviewSummaryConfig> = {}) {
     this.config = {
-      model: 'gpt-4o', // 使用最新的GPT-4o模型
+      model: 'gpt-4o-mini', // 使用GPT-4o-mini模型降低成本
       temperature: 0.3, // 较低温度确保一致性
       maxTokensPerRequest: 4000,
       summaryLanguage: 'zh',
@@ -344,12 +386,38 @@ ${chunk.content}
     chunks: TextChunk[],
     interviewInfo?: { candidateName: string; position: string }
   ): string {
+    // 🎯 获取岗位评估模板
+    const positionTemplate = interviewInfo?.position 
+      ? matchPositionTemplate(interviewInfo.position)
+      : matchPositionTemplate('general');
+
     const candidateInfo = interviewInfo ? `
 应聘人信息：
 - 姓名：${interviewInfo.candidateName}
-- 应聘岗位：${interviewInfo.position}` : '';
+- 应聘岗位：${interviewInfo.position}
+- 匹配模板：${positionTemplate.displayName}` : `
+- 使用通用评估模板`;
 
-    return `你是资深的HR面试专家。基于以下面试分析数据，生成完整的面试评估报告。
+    // 构建岗位评估维度说明
+    const professionalDimensions = positionTemplate.professionalDimensions.map(dim => 
+      `${dim.name}（权重${(dim.weight * 100).toFixed(0)}%）: ${dim.description}
+   评估标准: ${dim.evaluationCriteria.join(', ')}`
+    ).join('\n');
+
+    const personalDimensions = positionTemplate.personalDimensions.map(dim => 
+      `${dim.name}（权重${(dim.weight * 100).toFixed(0)}%）: ${dim.description}
+   评估标准: ${dim.evaluationCriteria.join(', ')}`
+    ).join('\n');
+
+    // 构建完整的原始转录内容 - 确保基于整体对话评估
+    const fullTranscript = chunks.map(chunk => chunk.content).join('\n\n');
+
+    // 🔍 面试时长判断逻辑
+    const isShortInterview = metadata.duration < 3; // 少于3分钟视为过短面试
+    const isValidInterview = metadata.totalWords > 50 && metadata.interactionCount > 2;
+
+    return `你是资深的HR面试专家，拥有20年面试评估经验。请基于完整的面试转录内容进行全面、客观的评估。
+
 ${candidateInfo}
 
 面试基本信息：
@@ -358,62 +426,153 @@ ${candidateInfo}
 - 互动次数：${metadata.interactionCount}
 - 问题数量：${metadata.questionCount}
 
-分块分析汇总：
+🎯 岗位专业能力评估维度：
+${professionalDimensions}
+
+👤 综合素质评估维度：
+${personalDimensions}
+
+📝 完整面试转录内容：
+${fullTranscript}
+
+💡 分析结果参考：
 ${JSON.stringify(consolidatedAnalysis, null, 2)}
 
-请生成完整的面试评估报告，使用以下JSON格式：
+🧠 高级评估指导原则：
+
+**第一步：面试有效性判断**
+${isShortInterview ? `
+⚠️ 检测到短时长面试（${metadata.duration}分钟）：
+- 如果内容有效但时长过短，需在总结中说明"面试时间较短，评估维度有限"
+- 对信息不足的维度标注insufficientInfo=true，但仍基于现有信息给出合理评估
+- 在recommendation中建议延长面试时间或安排后续面试` : `
+✅ 标准时长面试（${metadata.duration}分钟）：
+- 进行全面评估，基于完整对话内容
+- 重点分析候选人在各个维度的具体表现`}
+
+${!isValidInterview ? `
+⚠️ 检测到可能的无效面试内容：
+- 词数过少（${metadata.totalWords}词）或互动过少（${metadata.interactionCount}次）
+- 请仔细检查转录内容是否为真实面试对话
+- 如确认无效，在executiveSummary中说明原因并建议重新面试` : `
+✅ 有效面试内容检测通过`}
+
+**第二步：全面深度分析方法**
+1. **整体对话流程分析**：
+   - 从头到尾阅读完整转录，理解面试的整体脉络
+   - 识别面试的主要阶段：开场、技能评估、行为面试、问答环节等
+   - 分析候选人回答的逻辑性、连贯性和深度
+
+2. **多维度交叉验证**：
+   - 不要仅基于单个关键词或片段评分
+   - 寻找多个证据支撑每个维度的评估
+   - 考虑候选人在不同话题下的一致性表现
+
+3. **上下文理解**：
+   - 理解面试官问题的背景和意图
+   - 评估候选人是否真正理解问题并给出相关回答
+   - 识别候选人的思维过程和问题解决方法
+
+4. **岗位契合度分析**：
+   - 将候选人表现与具体岗位要求对照
+   - 评估技能匹配度、经验相关性、发展潜力
+   - 考虑团队配合和文化适配性
+
+**第三步：客观评分标准**
+- 1-3分：明显不符合要求，有重大缺陷
+- 4-5分：基本符合要求，但有明显改进空间  
+- 6-7分：符合要求，表现良好
+- 8-9分：超出预期，表现优秀
+- 10分：卓越表现，远超预期
+
+**第四步：证据支撑要求**
+- 每个评分必须有具体的对话内容作为证据
+- 引用原文时提供中文解释和分析
+- 避免主观印象，基于客观事实评估
+
+**第五步：输出要求**
+
+${isShortInterview || !isValidInterview ? `
+⚠️ 特殊情况处理：
+- 在executiveSummary中首先说明面试时长或内容的限制
+- 所有维度评估需要标注信息是否充足
+- 在recommendation中提供具体的改进建议
+- 即使信息有限，也要基于现有内容给出客观评估` : `
+✅ 标准评估要求：
+- 基于完整转录内容进行深入分析
+- 每个维度提供具体证据支撑
+- 综合多个表现点进行评分
+- 提供具体可行的发展建议`}
+
+请生成完整的面试评估报告，严格遵循以下JSON格式：
 
 {
-  "executiveSummary": "200字内的执行摘要，概述候选人整体表现",
+  "executiveSummary": "${isShortInterview ? '首先说明面试时长限制，然后' : ''}概述候选人整体表现，150-200字",
+  "positionAssessment": {
+    "matchedTemplate": {
+      "position": "${positionTemplate.position}",
+      "displayName": "${positionTemplate.displayName}",
+      "description": "${positionTemplate.description}"
+    },
+    "professionalAssessment": {
+      "dimensions": [
+        ${positionTemplate.professionalDimensions.map(dim => `{
+          "name": "${dim.name}",
+          "score": 评分1-10,
+          "evidence": ["具体对话证据1", "具体对话证据2"],
+          "insufficientInfo": ${isShortInterview || !isValidInterview ? 'true/false' : 'false'},
+          "reasoning": "详细评分理由，解释为什么给出这个分数"
+        }`).join(',\n        ')}
+      ],
+      "overallScore": 加权平均分,
+      "summary": "专业能力整体评价，结合各维度表现"
+    },
+    "personalAssessment": {
+      "dimensions": [
+        ${positionTemplate.personalDimensions.map(dim => `{
+          "name": "${dim.name}",
+          "score": 评分1-10,
+          "evidence": ["具体表现证据1", "具体表现证据2"],
+          "insufficientInfo": ${isShortInterview || !isValidInterview ? 'true/false' : 'false'},
+          "reasoning": "详细评分理由"
+        }`).join(',\n        ')}
+      ],
+      "overallScore": 加权平均分,
+      "summary": "综合素质整体评价"
+    },
+    "overallFit": {
+      "score": 综合匹配度评分,
+      "reasoning": "基于专业能力和综合素质的岗位匹配度分析",
+      "recommendations": ["具体发展建议1", "具体发展建议2", "具体发展建议3"]
+    }
+  },
   "candidatePerformance": {
-    "overall": "整体表现评价",
-    "strengths": ["优势1", "优势2", "优势3"],
-    "weaknesses": ["不足1", "不足2"],
-    "communicationSkills": "沟通能力具体评价",
-    "technicalSkills": "技术能力具体评价"
+    "overall": "整体表现客观评价，避免模糊表述",
+    "strengths": ["具体优势1（附原文证据）", "具体优势2（附原文证据）", "具体优势3（附原文证据）"],
+    "weaknesses": ["具体不足1（附改进建议）", "具体不足2（附改进建议）"],
+    "communicationSkills": "沟通能力的具体表现分析，包括表达清晰度、逻辑性、互动能力",
+    "technicalSkills": "专业技能的具体表现分析，基于面试中的技术讨论"
   },
   "keyInsights": {
-    "standoutMoments": ["亮点时刻1", "亮点时刻2"],
-    "concerningAreas": ["关注领域1", "关注领域2"],
-    "improvementSuggestions": ["改进建议1", "改进建议2", "改进建议3"]
+    "standoutMoments": ["令人印象深刻的回答或表现", "展现潜力的关键时刻"],
+    "concerningAreas": ["需要关注的问题领域", "潜在的风险点"],
+    "improvementSuggestions": ["针对性改进建议1", "针对性改进建议2", "发展方向建议"]
   },
   "recommendation": {
-    "decision": "recommend",
-    "reasoning": "推荐理由的详细说明",
-    "nextSteps": ["后续步骤1", "后续步骤2"]
-  },
-  "detailedAnalysis": {
-    "skillsAssessment": {
-      "communication": {
-        "score": 8,
-        "evidence": ["证据1", "证据2"],
-        "improvement": "改进建议"
-      },
-      "technical": {
-        "score": 7,
-        "evidence": ["证据1", "证据2"],
-        "improvement": "改进建议"
-      },
-      "problemSolving": {
-        "score": 6,
-        "evidence": ["证据1", "证据2"],
-        "improvement": "改进建议"
-      },
-      "leadership": {
-        "score": 5,
-        "evidence": ["证据1", "证据2"],
-        "improvement": "改进建议"
-      }
-    }
+    "decision": "${isShortInterview || !isValidInterview ? '"neutral"或合适的决策' : '"strongly_recommend"/"recommend"/"neutral"/"not_recommend"/"strongly_not_recommend"'}",
+    "reasoning": "基于以上分析的推荐理由，解释为什么做出这个决策",
+    "nextSteps": ["下一步行动建议1", "下一步行动建议2"]
   }
 }
 
-评估标准：
-- decision选项：strongly_recommend, recommend, neutral, not_recommend, strongly_not_recommend
-- score范围：1-10分
-- 基于具体事实和证据进行评价
-- 保持客观专业的评估态度
-- 提供具体可行的改进建议`;
+🎯 关键评估要求：
+- 每个评分必须有具体对话内容作为证据支撑
+- 避免使用模糊词汇如"还不错"、"比较好"等
+- 基于整体表现而非个别亮点或问题进行评估
+- ${isShortInterview ? '短面试需要在recommendation中建议延长面试时间' : ''}
+- ${!isValidInterview ? '无效内容需要建议重新安排正式面试' : ''}
+- 所有数值必须在合理范围内，避免极端评分
+- 提供的建议要具体可执行，避免空洞建议`;
   }
 
   // 🔧 调用GPT-4 API

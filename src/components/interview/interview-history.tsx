@@ -37,11 +37,13 @@ export function InterviewHistory({ className, onViewInterview }: InterviewHistor
     loadSessions();
   }, [loadSessions]);
 
-  const filteredSessions = sessions.filter(session =>
-    session.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    session.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (session.company && session.company.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredSessions = sessions
+    .filter(session =>
+      session.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      session.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (session.company && session.company.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // 时间倒序排列
 
   const formatDate = (date: Date | string) => {
     const d = new Date(date);
@@ -152,8 +154,8 @@ export function InterviewHistory({ className, onViewInterview }: InterviewHistor
             )}
           </div>
         ) : (
-          <ScrollArea className="h-[500px]">
-            <div className="space-y-4">
+          <ScrollArea className="h-[600px]">
+            <div className="space-y-2">
               {filteredSessions.map((session) => (
                 <InterviewCard
                   key={session.id}
@@ -198,75 +200,72 @@ function InterviewCard({
 }: InterviewCardProps) {
   return (
     <div
-      className={`border rounded-lg p-4 cursor-pointer transition-all hover:bg-muted/50 ${
-        isSelected ? 'ring-2 ring-primary' : ''
+      className={`border rounded-md p-3 cursor-pointer transition-all hover:bg-muted/30 hover:shadow-sm ${
+        isSelected ? 'ring-1 ring-primary bg-primary/5' : ''
       }`}
       onClick={onView}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {getStatusBadge(session)}
-          <span className="text-sm text-muted-foreground">
+      {/* 紧凑的头部信息 */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <User className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+            <span className="font-medium text-sm truncate">{session.candidateName}</span>
+            {getStatusBadge(session)}
+          </div>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
             {formatDate(session.timestamp)}
           </span>
         </div>
         
-        <div className="flex items-center gap-1">
+        {/* 紧凑的操作按钮组 */}
+        <div className="flex items-center gap-0.5 ml-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={(e) => onExport('json', e)}
-            title="导出为 JSON"
+            title="导出"
+            className="h-6 w-6 p-0 hover:bg-muted"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-3 w-3" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={onView}
-            title="查看详情"
+            title="查看"
+            className="h-6 w-6 p-0 hover:bg-muted"
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="h-3 w-3" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            title="删除记录"
-            className="text-destructive hover:text-destructive"
+            title="删除"
+            className="h-6 w-6 p-0 hover:bg-destructive/10 text-destructive/70 hover:text-destructive"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3 w-3" />
           </Button>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-base font-medium">
-          <User className="h-4 w-4 text-blue-500" />
-          <span>{session.candidateName}</span>
-        </div>
-        
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Briefcase className="h-4 w-4" />
-          <span>{session.position}</span>
-          {session.company && (
-            <>
-              <span>·</span>
-              <span>{session.company}</span>
-            </>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      {/* 紧凑的详细信息 */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <Clock className="h-4 w-4" />
+            <Briefcase className="h-3 w-3" />
+            <span className="truncate">{session.position}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
             <span>{formatDuration(session)}</span>
           </div>
         </div>
 
         {session.summary && (
-          <div className="mt-3 p-2 bg-muted/30 rounded text-sm">
-            <p className="line-clamp-2">{session.summary.executiveSummary}</p>
+          <div className="text-xs text-muted-foreground bg-muted/20 rounded px-2 py-1">
+            <p className="line-clamp-1">{session.summary.executiveSummary}</p>
           </div>
         )}
       </div>
