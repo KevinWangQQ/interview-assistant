@@ -133,6 +133,19 @@ export class SmartSegmentationProcessor {
     const endsWithIncompleteMarker = ['and', 'but', 'or', 'so', 'because', 'that', 'which', 'who', 'when', 'where', 'how', 'what', 'if', 'although', 'while']
       .some(word => currentText.toLowerCase().trim().endsWith(' ' + word));
     
+    // 检测大量重复文本 - 紧急分段条件
+    if (currentText.length > 1000) {
+      // 计算重复词汇比例
+      const words = currentText.split(/\s+/);
+      const uniqueWords = new Set(words.filter((w: string) => w.length > 2));
+      const repetitionRatio = 1 - (uniqueWords.size / words.length);
+      
+      if (repetitionRatio > 0.6) {
+        console.log(`🚨 检测到大量重复(${Math.round(repetitionRatio*100)}%)，强制分段`);
+        return true;
+      }
+    }
+    
     // 避免在不完整的地方分段
     if (endsWithIncompleteMarker) {
       console.log(`🚫 避免在不完整位置分段: "${currentText.slice(-20)}"`);
@@ -219,23 +232,41 @@ export class SmartSegmentationProcessor {
     if (!existingText) return newText;
     if (!newText) return existingText;
     
+    // 检查是否完全相同
+    if (existingText.trim() === newText.trim()) {
+      console.log('🚫 检测到完全相同的文本，跳过合并');
+      return existingText;
+    }
+    
     // 如果新文本完全包含在现有文本中，返回现有文本
-    if (existingText.includes(newText)) {
+    if (existingText.includes(newText.trim())) {
+      console.log('🚫 新文本已包含在现有文本中，跳过合并');
       return existingText;
     }
     
     // 如果新文本完全包含现有文本，返回新文本
-    if (newText.includes(existingText)) {
+    if (newText.includes(existingText.trim())) {
+      console.log('🔄 新文本包含现有文本，使用新文本');
       return newText;
     }
     
-    // 寻找重复的后缀/前缀
+    // 检查大量重复的情况 - 如果新文本超过80%都是重复的
     const existingWords = existingText.trim().split(/\s+/);
     const newWords = newText.trim().split(/\s+/);
     
+    // 检查新文本中有多少词在现有文本中重复出现
+    const duplicateWords = newWords.filter((word: string) => 
+      existingWords.includes(word) && word.length > 2 // 忽略短词
+    );
+    
+    if (duplicateWords.length > newWords.length * 0.8) {
+      console.log(`🚫 检测到大量重复(${Math.round(duplicateWords.length/newWords.length*100)}%)，跳过合并`);
+      return existingText;
+    }
+    
     // 查找最长的公共后缀（现有文本的结尾和新文本的开头）
     let overlapLength = 0;
-    const maxOverlap = Math.min(existingWords.length, newWords.length, 10); // 最多检查10个词
+    const maxOverlap = Math.min(existingWords.length, newWords.length, 15); // 增加到15个词
     
     for (let i = 1; i <= maxOverlap; i++) {
       const existingSuffix = existingWords.slice(-i).join(' ').toLowerCase();
@@ -254,7 +285,13 @@ export class SmartSegmentationProcessor {
       return result;
     }
     
-    // 没有重复，直接拼接（但这种情况应该很少）
+    // 检查文本长度是否合理 - 防止异常长的文本
+    if (existingText.length > 2000) {
+      console.log('⚠️ 现有文本过长，强制创建新分段');
+      return newText; // 返回新文本，触发分段
+    }
+    
+    // 没有重复，直接拼接
     return existingText + ' ' + newText;
   }
 

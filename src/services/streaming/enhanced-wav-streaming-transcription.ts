@@ -500,9 +500,30 @@ export class EnhancedWAVStreamingTranscriptionService {
           return;
         }
         
-        // 累积当前分段的文本
-        this.currentText = this.currentText ? 
-          this.currentText + ' ' + newText : newText;
+        // 累积当前分段的文本 - 添加重复检测保护
+        if (this.currentText) {
+          // 检查是否完全重复
+          if (this.currentText.includes(newText.trim())) {
+            console.log('🚫 检测到重复转录内容，跳过累积');
+            return;
+          }
+          
+          // 检查是否大量重复
+          const existingWords = this.currentText.split(/\s+/);
+          const newWords = newText.split(/\s+/);
+          const duplicateWords = newWords.filter((word: string) => 
+            existingWords.includes(word) && word.length > 2
+          );
+          
+          if (duplicateWords.length > newWords.length * 0.7) {
+            console.log(`🚫 检测到大量重复内容(${Math.round(duplicateWords.length/newWords.length*100)}%)，跳过累积`);
+            return;
+          }
+          
+          this.currentText = this.currentText + ' ' + newText;
+        } else {
+          this.currentText = newText;
+        }
         
         console.log('📝 增强版WAV转录更新 (当前分段):', this.currentText, `(置信度: ${confidence})`);
         
