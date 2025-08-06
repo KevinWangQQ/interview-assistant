@@ -111,23 +111,21 @@ export function EnhancedInterviewMain() {
   const handleStopRecording = async () => {
     try {
       // 先保存当前会话的所有分段到完成状态
-      let allSegments = [...storeSegments];
-      if (currentText && currentTranslation) {
-        // 如果还有未分段的内容，创建最后一个分段
-        allSegments = [
-          ...allSegments,
-          {
-            id: `final-segment-${Date.now()}`,
-            timestamp: new Date(),
-            englishText: currentText,
-            chineseText: currentTranslation,
-            speaker: 'candidate',
-            confidence: 0.9,
-            wordCount: currentText.split(' ').length,
-            isComplete: true
-          }
-        ];
-      }
+      const allSegments = currentText && currentTranslation
+        ? [
+            ...storeSegments,
+            {
+              id: `final-segment-${Date.now()}`,
+              timestamp: new Date(),
+              englishText: currentText,
+              chineseText: currentTranslation,
+              speaker: 'candidate',
+              confidence: 0.9,
+              wordCount: currentText.split(' ').length,
+              isComplete: true
+            }
+          ]
+        : [...storeSegments];
       
       setCompletedSegments(allSegments);
       
