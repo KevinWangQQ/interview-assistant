@@ -722,7 +722,9 @@ export class EnhancedWAVStreamingTranscriptionService {
       // 缓存结果（最多保存20个）
       if (this.transcriptionCache.size >= 20) {
         const firstKey = this.transcriptionCache.keys().next().value;
-        this.transcriptionCache.delete(firstKey);
+        if (firstKey) {
+          this.transcriptionCache.delete(firstKey);
+        }
       }
       this.transcriptionCache.set(audioHash, result);
       
@@ -756,7 +758,9 @@ export class EnhancedWAVStreamingTranscriptionService {
       // 缓存结果（最多保存30个）
       if (this.translationCache.size >= 30) {
         const firstKey = this.translationCache.keys().next().value;
-        this.translationCache.delete(firstKey);
+        if (firstKey) {
+          this.translationCache.delete(firstKey);
+        }
       }
       this.translationCache.set(textHash, result);
       
