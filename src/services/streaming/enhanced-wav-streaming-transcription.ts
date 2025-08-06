@@ -100,10 +100,10 @@ export class EnhancedWAVStreamingTranscriptionService {
       chunkInterval: 2000, // 🎯 优化为2秒，平衡响应速度和音频质量
       translationDelay: 500, // 缩短翻译延迟
       enableSystemAudio: true,
-      audioQualityThreshold: 0.1,
+      audioQualityThreshold: 0.01, // 🎯 降低阈值，避免过度过滤
       silenceThreshold: 0.01, // 静音阈值
       silenceDuration: 1000, // 1秒静音触发分段
-      minConfidenceScore: 0.6, // 提高置信度要求，过滤幻觉
+      minConfidenceScore: 0.3, // 🎯 降低置信度要求，避免过度过滤
       maxLinesPerSegment: 10, // 最多10行后分段
       ...config
     };
@@ -459,9 +459,11 @@ export class EnhancedWAVStreamingTranscriptionService {
       return;
     }
 
-    // 🎯 音频质量门槛检查
+    // 🎯 音频质量门槛检查（允许录制初期绕过）
     const audioQuality = this.calculateAudioQuality();
-    if (audioQuality < this.config.audioQualityThreshold) {
+    const recordingTime = Date.now() - this.recordingStartTime;
+    
+    if (audioQuality < this.config.audioQualityThreshold && recordingTime > 10000) {
       console.log(`🚫 音频质量过低(${audioQuality.toFixed(3)})，跳过处理`);
       // 保留一些音频块以备下次检查
       const keepSize = Math.max(1, Math.floor(this.audioChunks.length * 0.3));
@@ -1005,9 +1007,9 @@ export class EnhancedWAVStreamingTranscriptionService {
         }
       }
       
-      // 避免除零错误
+      // 避免除零错误 - 静音时返回较低但仍可处理的质量
       if (totalEnergy === 0) {
-        return 0.1;
+        return 0.02; // 🎯 静音时的质量评分，仍高于阈值0.01
       }
       
       // 音频质量评分基于总能量和频域分布
