@@ -866,93 +866,98 @@ export class EnhancedWAVStreamingTranscriptionService {
 
   // 🚨 检测Whisper API幻觉内容
   private isHallucinationContent(text: string): boolean {
-    if (!text || text.trim().length === 0) return false;
-    
-    const cleaned = text.toLowerCase().trim();
-    
-    // 1. 检测典型的广告/推广内容
-    const advertisingPatterns = [
-      /learn english/i,
-      /www\./i,
-      /\.com/i,
-      /\.org/i,
-      /\.net/i,
-      /for free/i,
-      /visit/i,
-      /website/i,
-      /transcripts? provided by/i,
-      /outsourcing/i,
-      /clear,? concise speech/i,
-      /without repetition/i,
-      /engvid/i
-    ];
-    
-    // 2. 检测过度重复的短语模式
-    const repetitivePatterns = [
-      /\b(\w+)\s+\1\s+\1\b/i,                    // 三连重复词汇
-      /\b([^.!?]{1,20})\s*\.\s*\1\s*\.\s*\1/i,  // 重复短句
-      /(clear,?\s*concise)/i,                    // Whisper常见幻觉短语
-      /(hello,?\s*hello)/i                       // 重复问候
-    ];
-    
-    // 3. 检测典型的Whisper幻觉句式
-    const hallucinationPhrases = [
-      'thank you for watching',
-      'subscribe to',
-      'like and subscribe',
-      'don\'t forget to',
-      'see you next time',
-      'bye bye',
-      'transcription outsourcing',
-      'provided by',
-      'learn english for free',
-      'clear concise speech',
-      'without repetition'
-    ];
-    
-    // 检查广告模式
-    for (const pattern of advertisingPatterns) {
-      if (pattern.test(cleaned)) {
-        console.log(`🚫 检测到广告模式: ${pattern} 在 "${text}"`);
-        return true;
-      }
-    }
-    
-    // 检查重复模式
-    for (const pattern of repetitivePatterns) {
-      if (pattern.test(cleaned)) {
-        console.log(`🚫 检测到重复模式: ${pattern} 在 "${text}"`);
-        return true;
-      }
-    }
-    
-    // 检查幻觉短语
-    for (const phrase of hallucinationPhrases) {
-      if (cleaned.includes(phrase)) {
-        console.log(`🚫 检测到幻觉短语: "${phrase}" 在 "${text}"`);
-        return true;
-      }
-    }
-    
-    // 4. 检查不合理的重复率
-    const words = cleaned.split(/\s+/).filter(w => w.length > 2);
-    if (words.length > 5) {
-      const uniqueWords = new Set(words);
-      const repetitionRatio = 1 - (uniqueWords.size / words.length);
+    try {
+      if (!text || typeof text !== 'string' || text.trim().length === 0) return false;
       
-      if (repetitionRatio > 0.6) {
-        console.log(`🚫 检测到过高重复率: ${Math.round(repetitionRatio * 100)}% 在 "${text}"`);
+      const cleaned = text.toLowerCase().trim();
+      
+      // 1. 检测典型的广告/推广内容
+      const advertisingPatterns = [
+        /learn english/i,
+        /www\./i,
+        /\.com/i,
+        /\.org/i,
+        /\.net/i,
+        /for free/i,
+        /visit/i,
+        /website/i,
+        /transcripts? provided by/i,
+        /outsourcing/i,
+        /clear,? concise speech/i,
+        /without repetition/i,
+        /engvid/i
+      ];
+      
+      // 2. 检测过度重复的短语模式
+      const repetitivePatterns = [
+        /\b(\w+)\s+\1\s+\1\b/i,                    // 三连重复词汇
+        /\b([^.!?]{1,20})\s*\.\s*\1\s*\.\s*\1/i,  // 重复短句
+        /(clear,?\s*concise)/i,                    // Whisper常见幻觉短语
+        /(hello,?\s*hello)/i                       // 重复问候
+      ];
+      
+      // 3. 检测典型的Whisper幻觉句式
+      const hallucinationPhrases = [
+        'thank you for watching',
+        'subscribe to',
+        'like and subscribe',
+        'don\'t forget to',
+        'see you next time',
+        'bye bye',
+        'transcription outsourcing',
+        'provided by',
+        'learn english for free',
+        'clear concise speech',
+        'without repetition'
+      ];
+      
+      // 检查广告模式
+      for (const pattern of advertisingPatterns) {
+        if (pattern.test(cleaned)) {
+          console.log(`🚫 检测到广告模式: ${pattern} 在 "${text}"`);
+          return true;
+        }
+      }
+      
+      // 检查重复模式
+      for (const pattern of repetitivePatterns) {
+        if (pattern.test(cleaned)) {
+          console.log(`🚫 检测到重复模式: ${pattern} 在 "${text}"`);
+          return true;
+        }
+      }
+      
+      // 检查幻觉短语
+      for (const phrase of hallucinationPhrases) {
+        if (cleaned.includes(phrase)) {
+          console.log(`🚫 检测到幻觉短语: "${phrase}" 在 "${text}"`);
+          return true;
+        }
+      }
+      
+      // 4. 检查不合理的重复率
+      const words = cleaned.split(/\s+/).filter(w => w.length > 2);
+      if (words.length > 5) {
+        const uniqueWords = new Set(words);
+        const repetitionRatio = 1 - (uniqueWords.size / words.length);
+        
+        if (repetitionRatio > 0.6) {
+          console.log(`🚫 检测到过高重复率: ${Math.round(repetitionRatio * 100)}% 在 "${text}"`);
+          return true;
+        }
+      }
+      
+      // 5. 检查URL和网站相关内容
+      if (/\b(www\.|http|\.com|\.org|\.net)\b/i.test(cleaned)) {
+        console.log(`🚫 检测到网址相关内容: "${text}"`);
         return true;
       }
+      
+      return false;
+    } catch (error) {
+      console.warn('幻觉内容检测出错:', error);
+      return false; // 出错时保守处理，不过滤内容
     }
-    
-    // 5. 检查URL和网站相关内容
-    if (/\b(www\.|http|\.com|\.org|\.net)\b/i.test(cleaned)) {
-      console.log(`🚫 检测到网址相关内容: "${text}"`);
-      return true;
-    }
-    
-    return false;
   }
 
   // 🧹 翻译前文本清理 - 移除重复提升翻译质量
