@@ -19,6 +19,12 @@ export interface TranscriptionSegment {
   speaker: 'interviewer' | 'candidate';
   confidence: number;
   isProcessing?: boolean;
+  // 🎯 流式显示支持
+  isTemporary?: boolean;      // 标记为临时段落（正在处理中）
+  isTranscribing?: boolean;   // 正在转录
+  isTranslating?: boolean;    // 正在翻译
+  englishText?: string;       // 英文原文（兼容新格式）
+  chineseText?: string;       // 中文翻译（兼容新格式）
 }
 
 export interface InterviewSummary {

@@ -311,25 +311,141 @@ export function EnhancedInterviewMain() {
           className="h-full overflow-y-auto px-4 py-6"
         >
           <div className="max-w-4xl mx-auto space-y-4">
-            {/* 显示面试总结（如果有） */}
+            {/* 增强版面试总结显示 */}
             {interviewSummary && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                  🤖 GPT-4o-mini 面试总结
+                  🤖 智能面试总结
                   <span className="text-sm text-blue-600 font-normal">
                     ({Math.floor(recordingTime / 60)}分钟面试)
                   </span>
+                  {interviewSummary.positionAssessment && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      岗位匹配分析
+                    </span>
+                  )}
                 </h3>
                 
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  {/* 执行摘要 */}
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-2">整体评估</h4>
-                    <p className="text-gray-700 leading-relaxed">
+                    <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                      📄 整体评估
+                    </h4>
+                    <p className="text-gray-700 leading-relaxed bg-gray-50 p-3 rounded">
                       {interviewSummary.executiveSummary}
                     </p>
                   </div>
                   
-                  {interviewSummary.candidatePerformance && (
+                  {/* V2.0新增：岗位匹配评估 */}
+                  {interviewSummary.positionAssessment && (
+                    <div className="bg-white border rounded-lg p-4">
+                      <h4 className="font-medium text-purple-900 mb-3 flex items-center gap-2">
+                        🎯 岗位匹配度分析
+                        <span className="text-sm font-normal text-gray-600">
+                          (基于{interviewSummary.positionAssessment.templateInfo.name})
+                        </span>
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                        {/* 综合匹配度 */}
+                        <div className="text-center p-3 bg-purple-50 rounded">
+                          <div className="text-2xl font-bold text-purple-700">
+                            {interviewSummary.positionAssessment.overallFit.score}分
+                          </div>
+                          <div className="text-sm text-purple-600">综合匹配度</div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {interviewSummary.positionAssessment.overallFit.level === 'excellent' && '非常匹配'}
+                            {interviewSummary.positionAssessment.overallFit.level === 'good' && '匹配较好'}
+                            {interviewSummary.positionAssessment.overallFit.level === 'fair' && '基本匹配'}
+                            {interviewSummary.positionAssessment.overallFit.level === 'poor' && '匹配度低'}
+                          </div>
+                        </div>
+                        
+                        {/* 技能匹配 */}
+                        <div className="text-center p-3 bg-green-50 rounded">
+                          <div className="text-2xl font-bold text-green-700">
+                            {Math.round(interviewSummary.positionAssessment.skillsMatching.matchingScore)}%
+                          </div>
+                          <div className="text-sm text-green-600">技能匹配度</div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {interviewSummary.positionAssessment.skillsMatching.demonstratedSkills.length}/
+                            {interviewSummary.positionAssessment.skillsMatching.requiredSkills.length} 项技能
+                          </div>
+                        </div>
+                        
+                        {/* 推荐级别 */}
+                        <div className="text-center p-3 bg-blue-50 rounded">
+                          <div className="text-lg font-bold text-blue-700">
+                            {interviewSummary.positionAssessment.recommendationLevel === 'strongly_recommend' && '强烈推荐'}
+                            {interviewSummary.positionAssessment.recommendationLevel === 'recommend' && '推荐'}
+                            {interviewSummary.positionAssessment.recommendationLevel === 'conditional' && '有条件推荐'}
+                            {interviewSummary.positionAssessment.recommendationLevel === 'not_recommend' && '不推荐'}
+                            {interviewSummary.positionAssessment.recommendationLevel === 'strongly_not_recommend' && '强烈不推荐'}
+                          </div>
+                          <div className="text-sm text-blue-600">推荐级别</div>
+                        </div>
+                      </div>
+                      
+                      {/* 维度评估简要展示 */}
+                      {interviewSummary.positionAssessment.dimensionAssessments && 
+                       interviewSummary.positionAssessment.dimensionAssessments.length > 0 && (
+                        <div>
+                          <h5 className="font-medium text-gray-800 mb-2">评估维度表现</h5>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {interviewSummary.positionAssessment.dimensionAssessments.slice(0, 6).map((dim: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                                <span className="text-gray-700">{dim.name}</span>
+                                <span className={`font-medium ${
+                                  dim.score >= 8 ? 'text-green-600' :
+                                  dim.score >= 6 ? 'text-blue-600' :
+                                  dim.score >= 4 ? 'text-orange-600' : 'text-red-600'
+                                }`}>
+                                  {dim.score}/10
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* 通用评估（兼容性）*/}
+                  {interviewSummary.generalAssessment && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-medium text-green-700 mb-2 flex items-center gap-1">
+                          ✅ 优势表现
+                        </h4>
+                        <ul className="text-sm text-gray-700 space-y-1">
+                          {interviewSummary.generalAssessment.strengths?.map((strength: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="text-green-500 mt-1">•</span>
+                              {strength}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-orange-700 mb-2 flex items-center gap-1">
+                          🔄 待改进领域
+                        </h4>
+                        <ul className="text-sm text-gray-700 space-y-1">
+                          {interviewSummary.generalAssessment.weaknesses?.map((weakness: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="text-orange-500 mt-1">•</span>
+                              {weakness}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 兼容原有格式 */}
+                  {interviewSummary.candidatePerformance && !interviewSummary.generalAssessment && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <h4 className="font-medium text-green-700 mb-2">优势</h4>
@@ -357,80 +473,136 @@ export function EnhancedInterviewMain() {
                     </div>
                   )}
                   
+                  {/* 推荐决策 */}
                   {interviewSummary.recommendation && (
                     <div className="border-t pt-4">
-                      <h4 className="font-medium text-gray-900 mb-2">推荐决策</h4>
-                      <p className="text-gray-700">{interviewSummary.recommendation.reasoning}</p>
+                      <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                        📝 推荐决策
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          interviewSummary.recommendation.decision === 'strongly_recommend' ? 'bg-green-100 text-green-700' :
+                          interviewSummary.recommendation.decision === 'recommend' ? 'bg-blue-100 text-blue-700' :
+                          interviewSummary.recommendation.decision === 'neutral' ? 'bg-gray-100 text-gray-700' :
+                          interviewSummary.recommendation.decision === 'not_recommend' ? 'bg-orange-100 text-orange-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {interviewSummary.recommendation.decision === 'strongly_recommend' && '强烈推荐'}
+                          {interviewSummary.recommendation.decision === 'recommend' && '推荐'}
+                          {interviewSummary.recommendation.decision === 'neutral' && '中性'}
+                          {interviewSummary.recommendation.decision === 'not_recommend' && '不推荐'}
+                          {interviewSummary.recommendation.decision === 'strongly_not_recommend' && '强烈不推荐'}
+                        </span>
+                      </h4>
+                      <p className="text-gray-700 leading-relaxed">{interviewSummary.recommendation.reasoning}</p>
+                      {interviewSummary.recommendation.nextSteps && interviewSummary.recommendation.nextSteps.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-sm font-medium text-gray-800 mb-1">后续步骤：</p>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {interviewSummary.recommendation.nextSteps.map((step: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <span className="text-blue-500 mt-1">▶</span>
+                                {step}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* 处理统计信息 */}
+                  {interviewSummary.processingStats && (
+                    <div className="text-xs text-gray-500 border-t pt-2 flex items-center justify-between">
+                      <span>
+                        分段数: {interviewSummary.processingStats.chunksProcessed || 0} | 
+                        处理时间: {Math.round((interviewSummary.processingStats.processingTimeMs || 0) / 1000)}s | 
+                        置信度: {Math.round((interviewSummary.processingStats.confidenceScore || 0) * 100)}%
+                      </span>
+                      {interviewSummary.processingStats.templateUsed && (
+                        <span className="text-purple-600">✓ 使用了岗位模板</span>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
             )}
             
-            {/* 显示已完成的分段 - 连续文本显示 */}
+            {/* 流式显示所有分段 - 包括完成的和进行中的 */}
             <div className="space-y-6">
-              {(isActive ? storeSegments : completedSegments).map((segment: any, index: number) => (
-                <div key={segment.id} className="space-y-2">
-                  {/* 时间戳和说话人标识 - 简洁显示 */}
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{new Date(segment.timestamp).toLocaleTimeString()}</span>
-                    {segment.speaker && (
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        segment.speaker === 'interviewer' 
-                          ? 'bg-purple-100 text-purple-600' 
-                          : 'bg-blue-100 text-blue-600'
+              {(isActive ? storeSegments : completedSegments).map((segment: any, index: number) => {
+                // 判断是否为临时段落（正在处理中）
+                const isTemporary = segment.isTemporary;
+                const isTranscribing = segment.isTranscribing;
+                const isTranslating = segment.isTranslating;
+                
+                return (
+                  <div key={segment.id} className={`space-y-2 transition-all duration-300 ${
+                    isTemporary ? 'bg-amber-50/30 p-3 rounded-lg border border-amber-200' : ''
+                  }`}>
+                    {/* 时间戳和说话人标识 - 简洁显示 */}
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{new Date(segment.timestamp).toLocaleTimeString()}</span>
+                      {segment.speaker && (
+                        <span className={`px-2 py-0.5 rounded text-xs ${
+                          segment.speaker === 'interviewer' 
+                            ? 'bg-purple-100 text-purple-600' 
+                            : 'bg-blue-100 text-blue-600'
+                        }`}>
+                          {segment.speaker === 'interviewer' ? '面试官' : '候选人'}
+                        </span>
+                      )}
+                      {/* 实时状态指示 */}
+                      {isTemporary && (
+                        <div className="flex items-center gap-2 text-xs text-amber-600">
+                          <div className="flex gap-1">
+                            <div className="w-1 h-1 bg-amber-500 rounded-full animate-bounce"></div>
+                            <div className="w-1 h-1 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                            <div className="w-1 h-1 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                          </div>
+                          <span className="font-medium">
+                            {isTranscribing ? '转录中' : isTranslating ? '翻译中' : '处理中'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* 英文原文 */}
+                    {segment.englishText && (
+                      <div className={`text-base leading-relaxed font-medium ${
+                        isTemporary ? 'text-amber-900' : 'text-gray-900'
                       }`}>
-                        {segment.speaker === 'interviewer' ? '面试官' : '候选人'}
-                      </span>
+                        {segment.englishText}
+                        {isTranscribing && <span className="text-amber-600 animate-pulse ml-1">●</span>}
+                      </div>
+                    )}
+                    
+                    {/* 中文翻译 */}
+                    {segment.chineseText && (
+                      <div className={`text-base leading-relaxed pl-4 border-l-2 ${
+                        isTemporary 
+                          ? 'text-amber-800 border-amber-300' 
+                          : 'text-gray-700 border-gray-200'
+                      }`}>
+                        {segment.chineseText}
+                        {isTranslating && <span className="text-amber-600 animate-pulse ml-1">●</span>}
+                      </div>
+                    )}
+                    
+                    {/* 等待翻译状态 */}
+                    {isTemporary && segment.englishText && !segment.chineseText && (
+                      <div className="text-xs text-amber-600 flex items-center gap-2 pl-4">
+                        <Loader className="w-3 h-3 animate-spin" />
+                        <span>正在翻译...</span>
+                      </div>
+                    )}
+                    
+                    {/* 分段间隔 */}
+                    {index < (isActive ? storeSegments : completedSegments).length - 1 && (
+                      <div className="h-4"></div>
                     )}
                   </div>
-                  
-                  {/* 英文原文 */}
-                  <div className="text-gray-900 text-base leading-relaxed font-medium">
-                    {segment.englishText}
-                  </div>
-                  
-                  {/* 中文翻译 */}
-                  <div className="text-gray-700 text-base leading-relaxed pl-4 border-l-2 border-gray-200">
-                    {segment.chineseText}
-                  </div>
-                  
-                  {/* 分段间隔 */}
-                  {index < (isActive ? storeSegments : completedSegments).length - 1 && (
-                    <div className="h-4"></div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
-            
-            {/* 显示当前进行中的转录 - 连续文本显示 */}
-            {isActive && (currentText || currentTranslation) && (
-              <div className="space-y-2 bg-amber-50/50 p-4 rounded-lg border border-amber-200">
-                {/* 实时状态指示 */}
-                <div className="flex items-center gap-2 text-xs text-amber-700">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                  </div>
-                  <span className="font-medium">实时转录中...</span>
-                </div>
-                
-                {/* 英文原文 */}
-                {currentText && (
-                  <div className="text-gray-900 text-base leading-relaxed font-medium">
-                    {currentText}
-                  </div>
-                )}
-                
-                {/* 中文翻译 */}
-                {currentTranslation && (
-                  <div className="text-gray-700 text-base leading-relaxed pl-4 border-l-2 border-amber-300">
-                    {currentTranslation}
-                  </div>
-                )}
-              </div>
-            )}
             
             {/* 等待状态 */}
             {!isActive && storeSegments.length === 0 && (

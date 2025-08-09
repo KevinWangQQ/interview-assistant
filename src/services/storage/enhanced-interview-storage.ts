@@ -10,6 +10,7 @@ import {
 } from '@/types/enhanced-interview';
 import { TranscriptionSegment } from '@/utils/smart-segmentation';
 import { InterviewSummary } from '@/services/interview-summary/gpt4-summary-service';
+import { EnhancedInterviewSummary } from '@/services/interview-summary/enhanced-gpt4-summary-service';
 
 export class EnhancedInterviewStorageService {
   private readonly STORAGE_KEY = 'enhanced-interview-sessions';
@@ -289,6 +290,35 @@ export class EnhancedInterviewStorageService {
         sessions = sessions.filter(session =>
           session.confidentialityLevel === filter.confidentialityLevel
         );
+      }
+      
+      // V2.0新增：按岗位模板过滤
+      if (filter.positionTemplateId) {
+        sessions = sessions.filter(session =>
+          session.positionTemplateId === filter.positionTemplateId
+        );
+      }
+      
+      // V2.0新增：按是否有岗位评估过滤
+      if (filter.hasPositionAssessment !== undefined) {
+        sessions = sessions.filter(session => {
+          const summary = session.summary as any;
+          const hasAssessment = !!(summary && summary.positionAssessment);
+          return filter.hasPositionAssessment ? hasAssessment : !hasAssessment;
+        });
+      }
+      
+      // V2.0新增：按总结类型过滤
+      if (filter.summaryType) {
+        sessions = sessions.filter(session => {
+          if (!session.summary) return false;
+          
+          // 检查是否为增强版总结
+          const summary = session.summary as any;
+          const isEnhanced = !!(summary.positionAssessment || summary.processingStats?.templateUsed);
+          
+          return filter.summaryType === 'enhanced' ? isEnhanced : !isEnhanced;
+        });
       }
       
       return sessions;

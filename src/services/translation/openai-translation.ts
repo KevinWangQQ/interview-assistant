@@ -100,13 +100,20 @@ export class OpenAITranslationService implements ITranslationService {
 
       this.updateUsageStats(response.usage);
 
-      const translatedText = response.choices[0]?.message?.content?.trim() || '';
-      console.log(`[${translateId}] 翻译结果:`, translatedText);
+      const rawResponse = response.choices[0]?.message?.content?.trim() || '';
+      console.log(`[${translateId}] 原始翻译响应:`, rawResponse);
+
+      // 🎯 使用新的格式化解析器
+      const parsedResult = this.parseFormattedTranslation(rawResponse);
+      console.log(`[${translateId}] 解析后翻译结果:`, {
+        original: parsedResult.originalText.substring(0, 50) + (parsedResult.originalText.length > 50 ? '...' : ''),
+        translated: parsedResult.translatedText.substring(0, 50) + (parsedResult.translatedText.length > 50 ? '...' : '')
+      });
 
       return {
-        translatedText,
+        translatedText: parsedResult.translatedText,
         confidence: 0.9,
-        originalText: text
+        originalText: parsedResult.originalText || text // 使用解析的原文，或回退到输入文本
       };
     } catch (error) {
       console.error(`[${translateId}] 翻译失败:`, error);
@@ -355,36 +362,29 @@ Text to translate:
 ${text}`;
   }
 
-  // 🧠 构建反重复的系统提示词
+  // 🧠 构建专业面试翻译的系统提示词
   private buildAntiRepetitionSystemPrompt(): string {
-    return `You are a professional translator specializing in interview conversations. Your task is to provide accurate, concise translations while avoiding repetition.
+    return `You are an AI translation assistant supporting a live job interview. 
 
-Key guidelines:
-1. Detect and eliminate redundant phrases or repeated content in the source text before translating
-2. If the source contains obvious repetitions, consolidate them into a single, clear translation
-3. Focus on the core meaning rather than literal word-for-word translation of repetitive elements
-4. Maintain professional tone suitable for interview contexts
-5. Do not add explanations, just provide the clean translation
-6. If the source text is low quality or heavily repetitive, provide the most coherent interpretation
+The candidate is speaking English, and your task is to translate each English sentence into **accurate, professional Chinese**. The translation must preserve technical and product-related terminology, and maintain a formal tone suitable for interviews.
 
-Prioritize clarity and conciseness over literal preservation of repetitive elements.`;
+Key requirements:
+1. Preserve all technical terms and professional vocabulary accurately
+2. Maintain formal interview tone in Chinese translation
+3. Detect and eliminate redundant phrases in source text before translating
+4. If source contains repetitions, consolidate into single clear translation
+5. Focus on core meaning rather than literal word-for-word translation
+6. Keep professional context - this is a formal interview setting
+
+Output format:
+【English】<original English sentence>
+【Chinese】<translated Chinese sentence>
+
+Do not omit any details. Keep the structure clean and clear. Only respond with the bilingual text in the specified format.`;
   }
 
-  // 🔄 构建上下文感知的翻译提示
+  // 🔄 构建专业面试翻译的用户提示
   private async buildContextAwarePrompt(text: string, from: string, to: string): Promise<string> {
-    const languageNames: Record<string, string> = {
-      'en': 'English',
-      'zh': 'Chinese',
-      'es': 'Spanish',
-      'fr': 'French',
-      'de': 'German',
-      'ja': 'Japanese',
-      'ko': 'Korean'
-    };
-
-    const fromLang = languageNames[from] || from;
-    const toLang = languageNames[to] || to;
-
     // 预处理文本 - 检测和标记重复模式
     const textAnalysis = this.analyzeTextForRepetition(text);
     let processedText = text;
@@ -395,12 +395,14 @@ Prioritize clarity and conciseness over literal preservation of repetitive eleme
       console.log(`🧹 文本预处理完成: "${text.substring(0, 50)}..." -> "${processedText.substring(0, 50)}..."`);
     }
 
-    return `Translate the following ${fromLang} text to ${toLang}. This is from an interview conversation context.
+    return `Here is the English transcript from the interview:
+"""
+${processedText}
+"""
 
-${textAnalysis.hasRepetition ? 'Note: The source text contained repetitive elements that have been consolidated.' : ''}
+${textAnalysis.hasRepetition ? 'Note: Source text contained repetitive elements that have been consolidated for clearer translation.' : ''}
 
-Text to translate:
-${processedText}`;
+Please translate following the specified bilingual format. Focus on accuracy and professionalism for this interview context.`;
   }
 
   // 📊 分析文本重复模式
@@ -455,6 +457,48 @@ ${processedText}`;
     const result = uniqueSentences.join('. ') + (uniqueSentences.length > 0 ? '.' : '');
     
     return result || text; // 如果清理后为空，返回原文
+  }
+
+  // 📋 解析格式化的双语翻译输出
+  private parseFormattedTranslation(response: string): { originalText: string; translatedText: string } {
+    try {
+      // 解析【English】【Chinese】格式 (使用[\s\S]*?来匹配多行内容)
+      const englishMatch = response.match(/【English】([\s\S]*?)【Chinese】/);
+      const chineseMatch = response.match(/【Chinese】([\s\S]*?)(?:【|$)/);
+      
+      const originalText = englishMatch?.[1]?.trim() || '';
+      const translatedText = chineseMatch?.[1]?.trim() || '';
+      
+      // 如果格式解析成功且都有内容，返回解析结果
+      if (originalText && translatedText) {
+        console.log('✅ 成功解析双语格式输出');
+        return { originalText, translatedText };
+      }
+      
+      // 如果格式不标准，尝试提取中文部分
+      const chineseOnlyMatch = response.match(/【Chinese】([\s\S]*?)$/) || response.match(/】([\s\S]*?)$/);
+      if (chineseOnlyMatch?.[1]?.trim()) {
+        console.log('⚠️ 部分解析双语格式，仅提取中文');
+        return {
+          originalText: '',
+          translatedText: chineseOnlyMatch[1].trim()
+        };
+      }
+      
+      // 完全无法解析格式时，返回原始响应作为翻译结果
+      console.log('⚠️ 无法解析双语格式，使用原始响应');
+      return {
+        originalText: '',
+        translatedText: response.trim()
+      };
+      
+    } catch (error) {
+      console.warn('格式化输出解析出错:', error);
+      return {
+        originalText: '',
+        translatedText: response.trim()
+      };
+    }
   }
 
   private updateUsageStats(usage?: any): void {

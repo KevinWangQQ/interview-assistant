@@ -806,11 +806,11 @@ export class EnhancedWAVStreamingTranscriptionService {
       isWAV: audioBlob.type === 'audio/wav'
     });
     
-    // 🎯 使用优化的参数减少重复
+    // 🎯 使用优化的参数减少重复 - 移除可能导致幻觉的prompt
     return await audioService.transcribe(audioBlob, {
       language: 'en',
       temperature: 0.0,  // 完全确定性，消除随机重复
-      prompt: 'Professional English interview conversation. Clear, concise speech without repetition.'
+      // 移除prompt参数，避免触发Whisper幻觉内容
     });
   }
 
@@ -908,7 +908,17 @@ export class EnhancedWAVStreamingTranscriptionService {
         'provided by',
         'learn english for free',
         'clear concise speech',
-        'without repetition'
+        'without repetition',
+        'castingwords',                    // 新发现的广告服务
+        'transcription by castingwords',   // 完整广告文案
+        'transcribed by',                  // 各种转录服务广告
+        'transcription service',           // 转录服务推广
+        'professional transcription',      // 专业转录服务广告
+        'captioning service',              // 字幕服务广告
+        'rev.com',                         // Rev转录服务
+        'www.',                            // 任何网址引用都是广告
+        '.com',                            // 网址后缀
+        'sponsored by'                     // 赞助商广告
       ];
       
       // 检查广告模式

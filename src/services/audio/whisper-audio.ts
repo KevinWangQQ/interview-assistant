@@ -597,24 +597,26 @@ export class WhisperAudioService implements IAudioService {
     return new Blob([arrayBuffer], { type: 'audio/wav' });
   }
 
-  // 🧠 构建反重复的智能提示词
+  // 🧠 构建反重复的智能提示词 - 已禁用避免Whisper幻觉
   private buildAntiRepetitionPrompt(originalPrompt?: string): string {
-    const prompt = originalPrompt || '';
+    // 🚫 完全禁用prompt功能，避免触发Whisper API幻觉内容
+    // 原因：任何提示词都可能导致Whisper生成虚假广告内容，如"Transcription by CastingWords"
+    console.log('🚫 Whisper prompt已禁用，避免幻觉内容');
+    return '';
     
-    // 添加反重复指导
-    const antiRepetitionGuidance = [
-      'Professional interview conversation.',
-      'Avoid repeating phrases or words unnecessarily.',
-      'Focus on clear, concise speech transcription.',
-      'Technical interview context.'
-    ].join(' ');
-    
-    // 合并原始prompt和反重复指导
-    if (prompt) {
-      return `${prompt} ${antiRepetitionGuidance}`;
-    } else {
-      return antiRepetitionGuidance;
-    }
+    // 以下代码已注释，避免幻觉问题：
+    // const prompt = originalPrompt || '';
+    // const antiRepetitionGuidance = [
+    //   'Professional interview conversation.',
+    //   'Avoid repeating phrases or words unnecessarily.',
+    //   'Focus on clear, concise speech transcription.',
+    //   'Technical interview context.'
+    // ].join(' ');
+    // if (prompt) {
+    //   return `${prompt} ${antiRepetitionGuidance}`;
+    // } else {
+    //   return antiRepetitionGuidance;
+    // }
   }
 
   // 📊 解析verbose_json格式的转录结果
@@ -750,7 +752,17 @@ export class WhisperAudioService implements IAudioService {
         'provided by',
         'learn english for free',
         'clear concise speech',
-        'without repetition'
+        'without repetition',
+        'castingwords',                    // 新发现的广告服务
+        'transcription by castingwords',   // 完整广告文案
+        'transcribed by',                  // 各种转录服务广告
+        'transcription service',           // 转录服务推广
+        'professional transcription',      // 专业转录服务广告
+        'captioning service',              // 字幕服务广告
+        'rev.com',                         // Rev转录服务
+        'www.',                            // 任何网址引用都是广告
+        '.com',                            // 网址后缀
+        'sponsored by'                     // 赞助商广告
       ];
       
       // 检查广告模式

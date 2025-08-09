@@ -223,29 +223,85 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
       },
 
       handleTranscriptionUpdate: (data: any) => {
-        console.log('📝 WAV转录更新:', data.text);
+        console.log('📝 WAV转录更新 (流式):', data.text);
+        const { segments } = get();
+        
+        // 🎯 流式显示：将当前转录添加到segments末尾作为临时段落
+        const tempSegment = {
+          id: `temp-${Date.now()}`,
+          englishText: data.text,
+          chineseText: '',
+          timestamp: new Date().toISOString(),
+          isTemporary: true,  // 标记为临时段落
+          isTranscribing: true, // 正在转录
+          confidence: data.confidence || 0.5
+        };
+
+        // 移除之前的临时段落，添加新的临时段落
+        const cleanSegments = segments.filter(seg => !seg.isTemporary);
+        
         set({
+          segments: [...cleanSegments, tempSegment],
           currentText: data.text,
           isProcessing: true
         });
       },
 
       handleTranslationUpdate: (data: any) => {
-        console.log('🌍 WAV翻译更新:', data.translation);
-        set({
-          currentText: data.text,
-          currentTranslation: data.translation,
-          isProcessing: false
-        });
+        console.log('🌍 WAV翻译更新 (流式):', data.translation);
+        const { segments } = get();
+        
+        // 🎯 流式显示：更新最后一个段落的翻译
+        const lastSegmentIndex = segments.length - 1;
+        if (lastSegmentIndex >= 0 && segments[lastSegmentIndex].isTemporary) {
+          const updatedSegments = [...segments];
+          updatedSegments[lastSegmentIndex] = {
+            ...updatedSegments[lastSegmentIndex],
+            englishText: data.text,
+            chineseText: data.translation,
+            isTranscribing: false, // 转录完成
+            isTranslating: false,  // 翻译完成
+            confidence: data.confidence || 0.9
+          };
+          
+          set({
+            segments: updatedSegments,
+            currentText: data.text,
+            currentTranslation: data.translation,
+            isProcessing: false
+          });
+        } else {
+          // 回退到原有逻辑
+          set({
+            currentText: data.text,
+            currentTranslation: data.translation,
+            isProcessing: false
+          });
+        }
       },
 
       handleSegmentCreated: (data: any) => {
-        console.log('📦 新分段创建:', data.segment.id);
+        console.log('📦 新分段创建 (流式):', data.segment.id);
         const { segments } = get();
+        
+        // 🎯 流式显示：将临时段落转为正式段落，避免清空导致的跳变
+        const cleanSegments = segments.filter(seg => !seg.isTemporary);
+        
+        // 创建正式的分段，包含完整的英文和中文内容
+        const finalSegment = {
+          ...data.segment,
+          isTemporary: false,
+          isTranscribing: false,
+          isTranslating: false,
+          confidence: data.segment.confidence || 0.9
+        };
+        
         set({
-          segments: [...segments, data.segment],
-          // 分段创建后，清空当前显示的文本，准备下一分段
-          currentText: '',
+          segments: [...cleanSegments, finalSegment],
+          // 🚀 关键改进：不再清空currentText，而是准备接收下一段
+          // currentText: '',
+          // currentTranslation: '',
+          currentText: '', // 还是需要清空，但UI会显示segments中的内容
           currentTranslation: '',
           isProcessing: false
         });
@@ -493,18 +549,68 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           console.log('📊 开始生成完整面试总结...');
           set({ isGeneratingSummary: true });
           
-          // 导入总结服务
-          const { GPT4InterviewSummaryService } = await import('@/services/interview-summary/gpt4-summary-service');
+          // 导入增强版总结服务和存储服务
+          const { EnhancedGPT4SummaryService } = await import('@/services/interview-summary/enhanced-gpt4-summary-service');
           const { EnhancedInterviewStorageService } = await import('@/services/storage/enhanced-interview-storage');
+          const { SupabaseUserProfileService } = await import('@/services/storage/supabase-storage');
           
-          const summaryService = new GPT4InterviewSummaryService();
+          const summaryService = new EnhancedGPT4SummaryService();
           const storageService = new EnhancedInterviewStorageService();
+          const userProfileService = new SupabaseUserProfileService();
           
-          // 生成总结（传入面试信息）
-          const summary = await summaryService.generateInterviewSummary(
-            allSegments, 
-            undefined, 
-            interviewInfo || undefined
+          // 尝试获取匹配的岗位模板
+          let positionTemplateId: string | undefined;
+          if (interviewInfo?.position) {
+            try {
+              const templates = await userProfileService.getPositionTemplates();
+              const matchingTemplate = templates.find(template => 
+                template.name.toLowerCase().includes(interviewInfo.position.toLowerCase()) ||
+                interviewInfo.position.toLowerCase().includes(template.name.toLowerCase())
+              );
+              if (matchingTemplate) {
+                positionTemplateId = matchingTemplate.id;
+                console.log('🎯 找到匹配的岗位模板:', matchingTemplate.name);
+              } else {
+                console.log('⚠️ 未找到匹配的岗位模板，使用通用评估');
+              }
+            } catch (error) {
+              console.warn('⚠️ 获取岗位模板失败，使用通用评估:', error);
+            }
+          }
+          
+          // 准备面试元数据
+          const interviewMetadata = {
+            duration: Math.floor(totalDuration / 60),
+            participantCount: 2,
+            totalWords,
+            questionCount: allSegments.filter((seg: any) => {
+              const text = seg.englishText || seg.text || '';
+              return text.includes('?');
+            }).length,
+            interactionCount: allSegments.length,
+            candidateName: interviewInfo?.candidateName,
+            position: interviewInfo?.position,
+            positionTemplateId
+          };
+          
+          // 转换分段格式以适配增强版服务
+          const enhancedSegments = allSegments.map((seg: any) => ({
+            id: seg.id || `seg-${Date.now()}-${Math.random()}`,
+            timestamp: seg.timestamp ? new Date(seg.timestamp).getTime() : Date.now(),
+            startTime: (seg.startTime || 0) * 1000, // 转换为毫秒
+            endTime: (seg.endTime || 30) * 1000,
+            englishText: seg.englishText || seg.text || '',
+            chineseText: seg.chineseText || seg.translation || '',
+            speaker: seg.speaker || 'candidate',
+            confidence: seg.confidence || 0.8,
+            wordCount: (seg.englishText || seg.text || '').split(/\s+/).filter(w => w.length > 0).length
+          }));
+          
+          // 生成增强版总结
+          const summary = await summaryService.generateSummary(
+            enhancedSegments,
+            interviewMetadata,
+            positionTemplateId
           );
           
           // 保存总结到store
@@ -545,6 +651,8 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
             rawTranscriptionText: allSegments.map((seg: any) => seg.englishText || seg.text || '').join(' '),
             rawTranslationText: allSegments.map((seg: any) => seg.chineseText || seg.translation || '').join(' '),
             summary: summary,
+            summaryGenerationStatus: 'completed',
+            positionTemplateId: positionTemplateId,
             statistics: {
               totalWords: allSegments.reduce((count: number, seg: any) => {
                 const text = seg.englishText || seg.text || '';

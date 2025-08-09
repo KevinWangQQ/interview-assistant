@@ -2,6 +2,7 @@
 
 import { TranscriptionSegment } from '@/utils/smart-segmentation';
 import { InterviewSummary } from '@/services/interview-summary/gpt4-summary-service';
+import { EnhancedInterviewSummary } from '@/services/interview-summary/enhanced-gpt4-summary-service';
 
 // 音频质量指标
 export interface AudioQualityMetrics {
@@ -53,8 +54,11 @@ export interface EnhancedInterviewSession {
   rawTranscriptionText: string; // 完整英文转录
   rawTranslationText: string;   // 完整中文翻译
   
-  // 智能分析
-  summary?: InterviewSummary;
+  // V2.0 新增：岗位模板支持
+  positionTemplateId?: string;
+  
+  // 智能分析 - 支持传统和增强版格式
+  summary?: InterviewSummary | EnhancedInterviewSummary;
   summaryGenerationStatus?: {
     jobId: string;
     status: 'pending' | 'in_progress' | 'completed' | 'failed';
@@ -62,6 +66,8 @@ export interface EnhancedInterviewSession {
     error?: string;
     startTime: Date;
     completedTime?: Date;
+    serviceType: 'standard' | 'enhanced'; // V2.0 新增：区分总结服务类型
+    templateUsed?: boolean; // V2.0 新增：是否使用了岗位模板
   };
   
   // 统计信息
@@ -125,6 +131,9 @@ export interface InterviewSessionFilter {
   maxDuration?: number;
   hasAudioIssues?: boolean;
   hasSummary?: boolean;
+  hasPositionAssessment?: boolean; // V2.0 新增：是否有岗位评估
+  positionTemplateId?: string; // V2.0 新增：岗位模板过滤
+  summaryType?: 'standard' | 'enhanced'; // V2.0 新增：总结类型过滤
   confidentialityLevel?: EnhancedInterviewSession['confidentialityLevel'];
 }
 

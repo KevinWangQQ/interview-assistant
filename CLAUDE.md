@@ -27,6 +27,13 @@ lsof -i :3000
 npm run build
 npm run start
 npm run lint
+
+# Testing commands (no dedicated test framework configured)
+# Check TypeScript compilation
+npm run build
+
+# Lint check
+npm run lint
 ```
 
 ### Service Restart Best Practices (经验总结)
@@ -183,6 +190,12 @@ The enhanced streaming service combines:
 - **影响组件**: 所有使用localStorage的存储服务需要客户端检查
 - **常见错误**: `ReferenceError: localStorage is not defined` 在SSR时出现
 
+### Audio Quality and Performance Monitoring
+- **Quality Thresholds**: The system has strict quality thresholds that may cause recording issues if audio quality is poor
+- **Audio Format**: WAV format is critical for Whisper API compatibility
+- **Hallucination Detection**: Enhanced filtering for Whisper API hallucination issues and advertisement content
+- **Silence Detection**: Improved silence detection to prevent false triggers during quiet periods
+
 ## Component Architecture
 
 ### Interview Flow Components
@@ -233,3 +246,29 @@ src/
 ```
 
 The codebase prioritizes reliability, extensibility, and professional interview scenarios with sophisticated audio handling and AI analysis capabilities.
+
+## Recent Enhancements
+
+### Enhanced WAV Streaming Implementation
+- **File**: `src/services/streaming/enhanced-wav-streaming-transcription.ts`
+- **Features**: Multi-audio source combination, intelligent segmentation, system audio capture for Teams meetings
+- **Quality Metrics**: Real-time audio quality monitoring with volume and clarity tracking
+
+### Smart Segmentation System
+- **File**: `src/utils/smart-segmentation.ts` 
+- **Features**: Semantic boundary detection, speaker change detection, time-based segmentation
+- **Context Preservation**: Maintains context across segments for better comprehension
+
+### Hallucination Detection and Content Filtering
+- Enhanced Whisper API integration with hallucination detection
+- Advertisement content filtering for cleaner transcriptions
+- Improved silence detection algorithms to prevent false positives
+
+## Current Issues and Fixes Applied
+
+Based on recent commits, the following issues have been resolved:
+1. **Audio Recording Output Issues**: Fixed overly strict quality thresholds causing recording failures
+2. **Whisper API Hallucinations**: Enhanced filtering and detection mechanisms  
+3. **ESLint Warnings**: Resolved prefer-const and unused variable warnings
+4. **TypeScript Errors**: Fixed cache management type issues
+5. **Runtime Exceptions**: Fixed syntax errors in hallucination detection functions

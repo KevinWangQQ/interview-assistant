@@ -1,4 +1,4 @@
-// 面试助手设置界面 - MVP版本
+// 面试助手设置界面 - V2.0多功能设置中心
 
 'use client';
 
@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { UserProfileSettings } from '@/components/settings/user-profile-settings';
+import { PositionTemplates } from '@/components/settings/position-templates';
 import { 
   Settings, 
   Key, 
@@ -16,9 +19,13 @@ import {
   EyeOff,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  User,
+  Briefcase,
+  Cloud
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/auth-context';
 
 export function InterviewSettings() {
   const [apiKey, setApiKey] = useState('');
@@ -27,6 +34,7 @@ export function InterviewSettings() {
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     // 从localStorage加载API密钥（仅在客户端）
@@ -127,17 +135,120 @@ export function InterviewSettings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">
           <Settings className="h-6 w-6 inline-block mr-2" />
-          面试助手设置
+          设置中心
         </h1>
         <p className="text-muted-foreground">
-          配置API密钥以启用语音转录和翻译功能
+          {user ? '管理您的个人资料、岗位模板和系统配置' : '配置API密钥以启用语音转录和翻译功能'}
         </p>
       </div>
 
+      {user ? (
+        // V2.0登录用户的完整设置界面
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              个人资料
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              岗位模板
+            </TabsTrigger>
+            <TabsTrigger value="api" className="flex items-center gap-2">
+              <Key className="h-4 w-4" />
+              API配置
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile">
+            <UserProfileSettings />
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <PositionTemplates />
+          </TabsContent>
+
+          <TabsContent value="api">
+            <div className="space-y-6">
+              <APIKeySettings 
+                apiKey={apiKey}
+                setApiKey={setApiKey}
+                showApiKey={showApiKey}
+                setShowApiKey={setShowApiKey}
+                isTestingConnection={isTestingConnection}
+                connectionStatus={connectionStatus}
+                errorMessage={errorMessage}
+                isSaving={isSaving}
+                testApiConnection={testApiConnection}
+                saveSettings={saveSettings}
+                getStatusBadge={getStatusBadge}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        // 未登录用户只能看到API配置
+        <div className="space-y-6">
+          <Alert>
+            <Cloud className="h-4 w-4" />
+            <AlertDescription>
+              <strong>提示：</strong>登录后可以访问更多设置选项，包括个人资料管理和岗位模板配置。
+            </AlertDescription>
+          </Alert>
+          
+          <APIKeySettings 
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            showApiKey={showApiKey}
+            setShowApiKey={setShowApiKey}
+            isTestingConnection={isTestingConnection}
+            connectionStatus={connectionStatus}
+            errorMessage={errorMessage}
+            isSaving={isSaving}
+            testApiConnection={testApiConnection}
+            saveSettings={saveSettings}
+            getStatusBadge={getStatusBadge}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// API密钥设置组件
+interface APIKeySettingsProps {
+  apiKey: string;
+  setApiKey: (key: string) => void;
+  showApiKey: boolean;
+  setShowApiKey: (show: boolean) => void;
+  isTestingConnection: boolean;
+  connectionStatus: 'unknown' | 'connected' | 'error';
+  errorMessage: string;
+  isSaving: boolean;
+  testApiConnection: () => Promise<void>;
+  saveSettings: () => Promise<void>;
+  getStatusBadge: () => React.ReactElement;
+}
+
+function APIKeySettings({
+  apiKey,
+  setApiKey,
+  showApiKey,
+  setShowApiKey,
+  isTestingConnection,
+  connectionStatus,
+  errorMessage,
+  isSaving,
+  testApiConnection,
+  saveSettings,
+  getStatusBadge
+}: APIKeySettingsProps) {
+  return (
+    <>
       {/* API密钥设置 */}
       <Card>
         <CardHeader>
@@ -239,7 +350,7 @@ export function InterviewSettings() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }
 
