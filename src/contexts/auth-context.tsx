@@ -165,8 +165,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      // 获取应用URL，优先使用环境变量，fallback到当前origin
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      
+      // 获取正确的应用URL
+      let appUrl: string;
+      
+      // 生产环境直接使用正确的域名
+      if (typeof window !== 'undefined' && window.location.hostname === 'interview.cnbu.link') {
+        appUrl = 'https://interview.cnbu.link';
+      } else if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+        appUrl = window.location.origin;
+      } else if (process.env.NEXT_PUBLIC_APP_URL) {
+        appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      } else if (typeof window !== 'undefined') {
+        appUrl = window.location.origin;
+      } else {
+        appUrl = 'https://interview.cnbu.link';
+      }
+      
+      console.log('🔗 OAuth回调URL:', `${appUrl}/auth/callback`);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
