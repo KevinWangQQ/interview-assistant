@@ -69,7 +69,10 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
 
   const handleCreateTemplate = async (templateData: Omit<PositionTemplate, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     try {
-      const newTemplate = await userProfileService.createPositionTemplate(templateData);
+      const newTemplate = await userProfileService.createPositionTemplate({
+        ...templateData,
+        user_id: '' // Will be set by the service based on current user
+      });
       setTemplates(prev => [newTemplate, ...prev]);
       setIsCreateDialogOpen(false);
     } catch (error) {

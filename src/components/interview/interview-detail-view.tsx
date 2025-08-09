@@ -236,20 +236,41 @@ export function InterviewDetailView({ interview, onBack }: InterviewDetailViewPr
                         {interview.summary.keyInsights.standoutMoments.map((moment, index) => (
                           <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
                             <span className="text-green-600">✓</span>
-                            <span>{moment}</span>
+                            <span>
+                              {typeof moment === 'string' ? moment : moment.description}
+                            </span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
                   
-                  {interview.summary.keyInsights.concerningAreas.length > 0 && (
+                  {((interview.summary.keyInsights as any).concerningAreas?.length > 0 || 
+                    (interview.summary.keyInsights as any).redFlags?.length > 0 || 
+                    (interview.summary.keyInsights as any).developmentAreas?.length > 0) && (
                     <div>
                       <h4 className="font-medium mb-2">关注点</h4>
                       <ul className="space-y-1">
-                        {interview.summary.keyInsights.concerningAreas.map((area, index) => (
-                          <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                        {/* Legacy concerningAreas */}
+                        {(interview.summary.keyInsights as any).concerningAreas?.map((area: string, index: number) => (
+                          <li key={`concern-${index}`} className="text-sm text-muted-foreground flex items-start gap-2">
                             <span className="text-orange-600">⚠</span>
+                            <span>{area}</span>
+                          </li>
+                        ))}
+                        
+                        {/* Enhanced redFlags */}
+                        {(interview.summary.keyInsights as any).redFlags?.map((flag: any, index: number) => (
+                          <li key={`flag-${index}`} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="text-red-600">🚩</span>
+                            <span>{flag.area}: {flag.description}</span>
+                          </li>
+                        ))}
+                        
+                        {/* Enhanced developmentAreas */}
+                        {(interview.summary.keyInsights as any).developmentAreas?.map((area: string, index: number) => (
+                          <li key={`dev-${index}`} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="text-blue-600">📈</span>
                             <span>{area}</span>
                           </li>
                         ))}
@@ -257,11 +278,11 @@ export function InterviewDetailView({ interview, onBack }: InterviewDetailViewPr
                     </div>
                   )}
                   
-                  {interview.summary.keyInsights.improvementSuggestions.length > 0 && (
+                  {(interview.summary.keyInsights as any).improvementSuggestions?.length > 0 && (
                     <div>
                       <h4 className="font-medium mb-2">改进建议</h4>
                       <ul className="space-y-1">
-                        {interview.summary.keyInsights.improvementSuggestions.map((suggestion, index) => (
+                        {(interview.summary.keyInsights as any).improvementSuggestions?.map((suggestion: string, index: number) => (
                           <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
                             <span className="text-blue-600">💡</span>
                             <span>{suggestion}</span>

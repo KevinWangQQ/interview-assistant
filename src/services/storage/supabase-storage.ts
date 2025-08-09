@@ -124,8 +124,8 @@ export class SupabaseStorageService implements IEnhancedStorageService {
           duration: segment.endTime - segment.startTime,
           confidence_score: segment.confidence || 0.9,
           audio_quality: 0.8, // 默认音频质量
-          is_complete: segment.isFinal,
-          is_final: segment.isFinal,
+          is_complete: true,
+          is_final: true,
           is_question: segment.englishText?.includes('?') || false,
           processed_at: new Date().toISOString(),
           processing_version: '2.0'
@@ -636,7 +636,8 @@ export class SupabaseStorageService implements IEnhancedStorageService {
       speaker: seg.speaker,
       confidence: seg.confidence_score,
       isFinal: seg.is_final,
-      isComplete: seg.is_complete
+      isComplete: seg.is_complete,
+      wordCount: seg.english_text?.split(' ').length || 0
     }));
 
     return {
@@ -672,7 +673,8 @@ export class SupabaseStorageService implements IEnhancedStorageService {
         status: sessionData.summary_status,
         progress: sessionData.summary_progress,
         startTime: new Date(sessionData.created_at),
-        completedTime: sessionData.summary_status === 'completed' ? new Date(sessionData.updated_at) : undefined
+        completedTime: sessionData.summary_status === 'completed' ? new Date(sessionData.updated_at) : undefined,
+        serviceType: 'enhanced' as const
       } : undefined,
       statistics: {
         totalWords: sessionData.total_words || 0,

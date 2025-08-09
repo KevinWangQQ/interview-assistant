@@ -225,15 +225,23 @@ export class EnhancedGPT4SummaryService {
       // 准备转录文本
       const fullTranscript = segments
         .filter(seg => seg.englishText && seg.englishText.trim())
-        .map(seg => `[${this.formatTimestamp(seg.timestamp)}] ${seg.speaker || 'Speaker'}: ${seg.englishText}`)
+        .map(seg => `[${this.formatTimestamp(typeof seg.timestamp === 'number' ? seg.timestamp : seg.timestamp.getTime())}] ${seg.speaker || 'Speaker'}: ${seg.englishText}`)
         .join('\n\n');
 
       if (!fullTranscript.trim()) {
         throw new Error('转录内容为空，无法生成总结');
       }
 
-      // 文本分块处理
-      const chunks = this.textChunker.chunkText(fullTranscript, this.config.maxTokensPerRequest - 1000);
+      // 文本分块处理 - 准备时间段数据
+      const timeSegments = segments
+        .filter(seg => seg.englishText && seg.englishText.trim())
+        .map(seg => ({
+          start: seg.startTime,
+          end: seg.endTime,
+          text: seg.englishText
+        }));
+        
+      const chunks = this.textChunker.chunkText(fullTranscript, timeSegments);
       console.log('📝 文本分块完成:', chunks.length, '个块');
 
       let summary: EnhancedInterviewSummary;
@@ -293,7 +301,7 @@ export class EnhancedGPT4SummaryService {
             },
             {
               role: 'user',
-              content: `请分析以下面试片段：\n\n${chunk.text}`
+              content: `请分析以下面试片段：\n\n${chunk.content}`
             }
           ],
           max_tokens: this.config.maxTokensPerRequest
@@ -354,7 +362,7 @@ export class EnhancedGPT4SummaryService {
             },
             {
               role: 'user',
-              content: `请分析以下面试片段：\n\n${chunk.text}`
+              content: `请分析以下面试片段：\n\n${chunk.content}`
             }
           ],
           max_tokens: this.config.maxTokensPerRequest

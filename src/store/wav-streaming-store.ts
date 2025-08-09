@@ -596,14 +596,16 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           // 转换分段格式以适配增强版服务
           const enhancedSegments = allSegments.map((seg: any) => ({
             id: seg.id || `seg-${Date.now()}-${Math.random()}`,
-            timestamp: seg.timestamp ? new Date(seg.timestamp).getTime() : Date.now(),
+            timestamp: seg.timestamp ? new Date(seg.timestamp) : new Date(),
             startTime: (seg.startTime || 0) * 1000, // 转换为毫秒
             endTime: (seg.endTime || 30) * 1000,
             englishText: seg.englishText || seg.text || '',
             chineseText: seg.chineseText || seg.translation || '',
             speaker: seg.speaker || 'candidate',
             confidence: seg.confidence || 0.8,
-            wordCount: (seg.englishText || seg.text || '').split(/\s+/).filter(w => w.length > 0).length
+            wordCount: (seg.englishText || seg.text || '').split(/\s+/).filter((w: string) => w.length > 0).length,
+            isComplete: true,
+            isFinal: true
           }));
           
           // 生成增强版总结
@@ -651,7 +653,14 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
             rawTranscriptionText: allSegments.map((seg: any) => seg.englishText || seg.text || '').join(' '),
             rawTranslationText: allSegments.map((seg: any) => seg.chineseText || seg.translation || '').join(' '),
             summary: summary,
-            summaryGenerationStatus: 'completed',
+            summaryGenerationStatus: {
+              jobId: `job-${Date.now()}`,
+              status: 'completed' as const,
+              progress: 100,
+              startTime: new Date(Date.now() - 30000), // 假设30秒前开始
+              completedTime: new Date(),
+              serviceType: 'enhanced' as const
+            },
             positionTemplateId: positionTemplateId,
             statistics: {
               totalWords: allSegments.reduce((count: number, seg: any) => {

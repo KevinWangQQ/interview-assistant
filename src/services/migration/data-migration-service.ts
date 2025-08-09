@@ -72,7 +72,7 @@ export class DataMigrationService {
       }
 
       // 获取本地数据统计
-      const localSessions = this.localStorageService.listSessions();
+      const localSessions = this.localStorageService.getAllSessions();
       
       // 获取云端数据统计
       const cloudSessions = await this.supabaseStorage.listSessions();
@@ -108,7 +108,7 @@ export class DataMigrationService {
         needsMigration,
         localSessionsCount: localSessions.length,
         cloudSessionsCount: cloudSessions.length,
-        lastMigrationTime
+        lastMigrationTime: lastMigrationTime || undefined
       };
 
     } catch (error) {
@@ -149,7 +149,7 @@ export class DataMigrationService {
     try {
       // 阶段1：扫描本地数据
       onProgress?.(progress);
-      const localSessions = this.localStorageService.listSessions();
+      const localSessions = this.localStorageService.getAllSessions();
       
       if (localSessions.length === 0) {
         console.log('ℹ️ 没有本地数据需要迁移');
@@ -470,8 +470,9 @@ export class DataMigrationService {
 
   private async getLastMigrationTime(): Promise<Date | null> {
     try {
-      const timestamp = await this.supabaseStorage.getUserSetting('last_migration_time');
-      return timestamp ? new Date(timestamp) : null;
+      // 简化实现：从localStorage获取迁移时间
+      const timestampStr = localStorage.getItem('last_migration_time');
+      return timestampStr ? new Date(timestampStr) : null;
     } catch (error) {
       console.warn('⚠️ 获取上次迁移时间失败:', error);
       return null;
@@ -480,7 +481,8 @@ export class DataMigrationService {
 
   private async recordMigrationTime(): Promise<void> {
     try {
-      await this.supabaseStorage.setUserSetting('last_migration_time', new Date().toISOString());
+      // 简化实现：保存到localStorage
+      localStorage.setItem('last_migration_time', new Date().toISOString());
       console.log('📝 记录迁移完成时间');
     } catch (error) {
       console.error('❌ 记录迁移时间失败:', error);
