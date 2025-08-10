@@ -6,6 +6,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { createClientComponentClient } from '@/lib/supabase/client';
 import { DataMigrationService } from '@/services/migration/data-migration-service';
+import { getOAuthCallbackUrl, validateOAuthConfig } from '@/lib/oauth-config';
 
 interface MigrationStatus {
   needsMigration: boolean;
@@ -166,28 +167,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setLoading(true);
       
-      // 获取正确的应用URL
-      let appUrl: string;
-      
-      // 生产环境直接使用正确的域名
-      if (typeof window !== 'undefined' && window.location.hostname === 'interview.cnbu.link') {
-        appUrl = 'https://interview.cnbu.link';
-      } else if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
-        appUrl = window.location.origin;
-      } else if (process.env.NEXT_PUBLIC_APP_URL) {
-        appUrl = process.env.NEXT_PUBLIC_APP_URL;
-      } else if (typeof window !== 'undefined') {
-        appUrl = window.location.origin;
-      } else {
-        appUrl = 'https://interview.cnbu.link';
+      // 验证OAuth配置
+      const configValidation = validateOAuthConfig();
+      if (configValidation.warnings.length > 0) {
+        console.warn('⚠️ OAuth配置警告:', configValidation.warnings);
       }
       
-      console.log('🔗 OAuth回调URL:', `${appUrl}/auth/callback`);
+      // 获取安全的回调URL
+      const callbackUrl = getOAuthCallbackUrl();
+      
+      console.log('🔗 OAuth回调URL:', callbackUrl);
+      console.log('🌐 环境信息:', configValidation.config);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${appUrl}/auth/callback`,
+          redirectTo: callbackUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

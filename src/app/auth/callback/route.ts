@@ -33,8 +33,9 @@ export async function GET(request: NextRequest) {
           .eq('user_id', data.session.user.id)
           .single();
         
-        if (!profile && !profileError) {
-          // 创建用户profile
+        // 如果用户profile不存在（无论是null还是查询错误），都创建新的profile
+        if (!profile) {
+          console.log('创建新用户profile...');
           const { error: insertError } = await supabase
             .from('user_profiles')
             .insert({
@@ -45,9 +46,12 @@ export async function GET(request: NextRequest) {
           
           if (insertError) {
             console.error('创建用户profile失败:', insertError);
+            // 不要因为profile创建失败就阻止用户登录
           } else {
             console.log('✅ 用户profile创建成功');
           }
+        } else {
+          console.log('✅ 用户profile已存在');
         }
       }
       
