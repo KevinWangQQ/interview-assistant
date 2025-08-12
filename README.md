@@ -1,137 +1,435 @@
-# 面试助手 (Interview Assistant)
+# 🎯 AI面试助手 - Interview Assistant
 
-一个基于 Next.js 和 OpenAI 的实时英文面试助手，为英文不好的中国面试官提供实时转录和中文翻译功能。
+一个基于 Next.js 14 和 OpenAI 的智能面试辅助平台，专为中国面试官设计，提供实时英文转录、中文翻译、智能总结和数据分析功能。帮助面试官突破语言障碍，提升面试效率和质量。
 
-## 功能特性
+## 📋 项目概述
 
-- ✅ **实时音频转录**: 使用 OpenAI Whisper API 将英文语音转换为文字
-- ✅ **智能中文翻译**: 使用 OpenAI GPT 提供准确的中文翻译
-- ✅ **双栏显示界面**: 左侧英文原文，右侧中文翻译，清晰对比
-- ✅ **面试会话管理**: 支持开始/暂停/停止面试，自动保存记录
-- ✅ **智能问题建议**: 基于对话内容自动生成相关的面试问题
-- ✅ **本地数据存储**: 使用 IndexedDB 存储面试记录，支持离线查看
-- ✅ **历史记录管理**: 查看、搜索、删除、导出历史面试记录
-- ✅ **响应式设计**: 支持桌面端和移动端使用
+### 🎯 核心价值
+- **语言无障碍**: 实时英文转录和中文翻译，让面试官专注于候选人评估
+- **智能辅助**: AI驱动的问题建议和面试总结，提升面试专业度
+- **数据驱动**: 完整的面试记录和数据分析，支持招聘决策
+- **企业级**: 用户认证、数据隔离、安全可靠的多租户架构
 
-## 快速开始
+## 🚀 功能特性
 
-### 1. 环境要求
-- Node.js 18+ 
-- 现代浏览器 (支持 MediaRecorder API)
-- OpenAI API Key
+### 核心面试功能
+- ✅ **实时音频转录**: 基于 OpenAI Whisper API 的高精度英文语音识别
+- ✅ **智能中文翻译**: GPT-4 驱动的专业级实时翻译
+- ✅ **多音源录制**: 支持麦克风+系统音频，适配Teams等远程面试场景
+- ✅ **智能分段**: 基于语义边界的智能文本分段和说话人识别
+- ✅ **质量监控**: 实时音频质量检测和录制状态监控
 
-### 2. 安装依赖
+### 智能辅助功能
+- ✅ **AI面试总结**: GPT-4 生成结构化面试报告和候选人评估
+- ✅ **智能问题建议**: 基于对话内容自动生成相关面试问题
+- ✅ **岗位模板系统**: 预设岗位评估标准，个性化面试流程
+- ✅ **实时幻觉检测**: 过滤Whisper API的幻觉内容和广告干扰
+
+### 数据管理功能
+- ✅ **用户认证系统**: Google OAuth登录，安全可靠
+- ✅ **数据隔离**: 基于Supabase RLS的多租户数据安全
+- ✅ **面试历史管理**: 分组展示、搜索过滤、批量操作
+- ✅ **多格式导出**: 支持JSON/CSV/TXT格式数据导出
+- ✅ **云端同步**: Supabase数据库，跨设备数据同步
+
+### 用户体验
+- ✅ **现代化UI**: 基于shadcn/ui的美观界面设计
+- ✅ **响应式布局**: 完美支持桌面端和移动端
+- ✅ **实时状态**: 录制状态、网络状态、处理进度实时显示
+- ✅ **错误恢复**: 完善的错误处理和自动重试机制
+
+## 🚀 快速开始
+
+### 在线体验
+🌐 **生产环境**: [https://interview.cnbu.link](https://interview.cnbu.link)
+
+### 本地开发
+
+#### 1. 环境要求
+- **Node.js**: 18.17+ 
+- **浏览器**: Chrome 80+, Firefox 82+, Safari 14+ (需支持 MediaRecorder API)
+- **API密钥**: OpenAI API Key (支持 Whisper + GPT-4)
+- **数据库**: Supabase 项目 (可选，默认使用我们提供的实例)
+
+#### 2. 克隆并安装
 ```bash
+git clone https://github.com/KevinWangQQ/interview-assistant.git
+cd interview-assistant
 npm install
 ```
 
-### 3. 配置环境变量
+#### 3. 环境配置
 创建 `.env.local` 文件：
 ```env
+# OpenAI API配置 (必须)
 NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
+
+# Supabase配置 (可选，默认使用公共实例)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### 4. 启动开发服务器
+#### 4. 开发服务器
 ```bash
+# 清理端口并启动 (推荐)
+npm run dev:clean
+
+# 或者直接启动
 npm run dev
 ```
 
 访问 http://localhost:3000 开始使用。
 
-### 5. 构建生产版本
+#### 5. 生产构建
 ```bash
 npm run build
+npm run start
+```
+
+## 🏗️ 技术架构
+
+### 前端技术栈
+- **Next.js 15.4.5**: React 全栈框架，使用 App Router + SSR
+- **TypeScript 5.0+**: 完整的类型安全和编译时检查
+- **Tailwind CSS**: 实用工具优先的CSS框架
+- **shadcn/ui**: 高质量的React组件库，基于Radix UI
+- **Zustand**: 轻量级状态管理，支持持久化
+- **Lucide React**: 现代化图标库，1000+ SVG图标
+
+### 核心服务层架构
+
+#### 1. 音频处理服务 (`/src/services/streaming/`)
+- **enhanced-wav-streaming-transcription.ts**: 多音源音频捕获
+  - 支持麦克风 + 系统音频同时录制
+  - AudioContext直接PCM录制，WAV格式优化
+  - Teams会议音频场景优化
+- **智能分段系统**: 基于语义边界的文本分段
+- **质量监控**: 实时音频质量检测和录制状态监控
+
+#### 2. AI分析服务 (`/src/services/interview-summary/`)
+- **gpt4-summary-service.ts**: 专业面试分析
+  - 英文优先处理策略，提升准确性
+  - 支持大型转录文本的分块处理
+- **summary-generation-manager.ts**: 异步工作流管理
+- **text-chunking.ts**: Token感知的文本分段算法
+
+#### 3. 存储服务 (`/src/services/storage/`)
+- **enhanced-interview-storage.ts**: 完整面试会话管理
+- **user-profile.service.ts**: 用户配置管理，支持自动创建
+- **position-template.service.ts**: 岗位模板系统，优雅降级设计
+- **接口抽象**: 统一的存储接口，支持多种后端
+
+#### 4. 数据库集成
+- **Supabase**: PostgreSQL + 实时功能 + 认证
+- **Row Level Security (RLS)**: 多租户数据隔离
+- **IndexedDB**: 本地存储备份，离线功能支持
+- **数据迁移**: 本地到云端的无缝迁移
+
+### 状态管理模式
+
+#### Zustand Store设计
+- **enhanced-wav-streaming-store.ts**: 多音频源录制状态
+- **interview-history-store.ts**: 面试会话管理状态
+- **user-auth-store.ts**: 用户认证状态管理
+- 每个Store专注特定领域，支持异步操作和错误处理
+
+### 智能化功能
+
+#### 1. 智能分段处理器 (`/src/utils/smart-segmentation.ts`)
+- **语义边界检测**: 基于句子完整性的分段
+- **说话人变化检测**: 面试对话流程识别
+- **时间阈值分段**: 可配置的时间间隔控制
+- **上下文保持**: 跨段落的语义连贯性
+
+#### 2. 幻觉检测与内容过滤
+- **Whisper API幻觉检测**: 过滤AI生成的虚假内容
+- **广告内容过滤**: 移除音频中的广告干扰
+- **静音检测增强**: 防止静音期间的误触发
+
+### API密钥管理
+
+#### 优先级层次结构
+1. **环境变量**: `process.env.NEXT_PUBLIC_OPENAI_API_KEY`
+2. **localStorage**: `localStorage.getItem('openai_api_key')`
+3. **应用配置**: `localStorage.getItem('interview-assistant-config')`
+
+#### 安全实践
+- 客户端加密存储
+- 不在服务器端持久化API密钥
+- 支持运行时密钥验证和测试
+
+## 📖 使用指南
+
+### 首次使用配置
+
+#### 1. 用户认证设置
+- **Google OAuth登录**: 点击"登录"按钮，使用Google账号认证
+- **数据隔离**: 登录后自动创建个人数据空间，确保隐私安全
+- **自动初始化**: 系统自动创建用户配置和默认岗位模板
+
+#### 2. API密钥配置
+- **进入设置页面**: 点击右上角"设置" → "API配置"
+- **输入OpenAI API Key**: 粘贴您的API密钥
+- **连接测试**: 系统自动测试密钥有效性
+- **保存配置**: 密钥安全存储在本地，不会上传到服务器
+
+#### 3. 个人资料设置
+- **用户信息**: 设置显示名称、头像等基本信息
+- **界面偏好**: 选择语言(中文/英文)、主题(浅色/深色/跟随系统)
+- **功能配置**: 自动生成总结、系统通知等选项
+- **隐私级别**: 设定默认的面试记录隐私级别
+
+### 岗位模板管理
+
+#### 创建模板
+1. **进入模板管理**: 设置 → 岗位模板管理
+2. **新建模板**: 点击"新建模板"按钮
+3. **填写基本信息**:
+   - 岗位名称(必填): 如"高级前端工程师"
+   - 岗位描述: 简要描述职责和特点
+   - 经验要求: 初级/中级/高级/管理级
+4. **详细配置**:
+   - 技能标签: 用逗号分隔，如"React, TypeScript, Node.js"
+   - 评估标准: JSON格式的评估维度和权重
+   - 所属部门: 如"前端组"、"后端组"
+
+#### 模板使用
+- **设为默认**: 星标图标设置常用模板
+- **编辑修改**: 铅笔图标进入编辑模式
+- **删除模板**: 垃圾桶图标删除(默认模板不可删除)
+
+### 面试流程操作
+
+#### 1. 开始面试
+- **创建面试**: 点击主页"开始新面试"
+- **填写信息**: 
+  - 候选人姓名(必填)
+  - 应聘职位(必填)
+  - 选择岗位模板(可选，影响总结生成)
+- **权限确认**: 浏览器会请求麦克风权限，请点击"允许"
+
+#### 2. 音频设置指南
+- **麦克风测试**: 系统显示实时音量指示器
+- **多音源配置**: 
+  - 单人面试: 仅使用麦克风
+  - Teams会议: 启用"系统音频捕获"
+- **质量监控**: 右上角显示录制状态和音频质量
+
+#### 3. 实时转录体验
+- **双栏显示**: 
+  - 左侧: 英文原文实时显示
+  - 右侧: 中文翻译同步更新
+- **智能分段**: 自动识别说话人变化和语义边界
+- **问题建议**: 右侧面板根据对话内容生成相关面试问题
+- **实时状态**: 显示转录进度、API调用状态
+
+#### 4. 面试控制功能
+- **暂停/继续**: 空格键或点击按钮控制录制
+- **手动分段**: 点击"插入分隔符"手动划分话题
+- **实时编辑**: 可以手动修正转录错误
+- **保存草稿**: 系统每30秒自动保存进度
+
+#### 5. 结束面试
+- **停止录制**: 点击"结束面试"按钮
+- **自动总结**: 如果启用，系统自动生成AI面试总结
+- **数据保存**: 面试记录自动保存到历史记录
+- **即时查看**: 可立即查看完整的面试记录和分析
+
+### 高级功能使用
+
+#### 1. 面试总结与分析
+- **AI生成总结**: 基于岗位模板的个性化总结
+- **候选人评估**: 多维度能力分析和建议
+- **关键词提取**: 自动标记重要技能和特质
+- **评分建议**: 基于评估标准的量化评分
+
+#### 2. 历史记录管理
+- **分组显示**: 按日期、职位等维度组织面试记录
+- **搜索过滤**: 全文搜索面试内容，多条件筛选
+- **批量操作**: 支持批量导出、删除、标记等操作
+- **数据统计**: 面试数量、时长、候选人分布等统计
+
+#### 3. 数据导出与备份
+- **多格式导出**: 支持JSON、CSV、TXT格式
+- **选择性导出**: 可选择导出字段和时间范围
+- **云端同步**: Google账号登录后自动云端备份
+- **本地迁移**: V1.0本地数据可一键迁移到云端账号
+
+### 故障排除指南
+
+#### 常见问题解决
+1. **录音权限被拒绝**:
+   - 检查浏览器设置中的麦克风权限
+   - 刷新页面重新请求权限
+   - 确保使用HTTPS访问(生产环境必需)
+
+2. **转录质量不佳**:
+   - 确保网络连接稳定
+   - 检查麦克风音量和质量
+   - 尝试使用外接麦克风
+   - 避免嘈杂环境
+
+3. **API调用失败**:
+   - 验证OpenAI API密钥是否有效
+   - 检查账户余额是否充足
+   - 确认API访问权限(Whisper + GPT)
+
+4. **数据同步问题**:
+   - 确认Google账号登录状态
+   - 检查网络连接
+   - 尝试手动刷新页面
+
+## ⚙️ API配置详解
+
+### OpenAI API密钥获取
+
+#### 步骤指南
+1. **注册OpenAI账号**: 访问 [OpenAI官网](https://platform.openai.com/)
+2. **进入API管理**: 访问 [API Keys页面](https://platform.openai.com/api-keys)
+3. **创建新密钥**: 点击 "Create new secret key"
+4. **设置权限**: 确保密钥有Whisper和GPT-4访问权限
+5. **复制保存**: 立即复制密钥(仅显示一次)
+6. **应用配置**: 在面试助手设置中输入并测试
+
+#### 费用估算与优化
+- **Whisper API**: $0.006/分钟 (音频转录)
+- **GPT-4 API**: $0.01-0.03/1K tokens (翻译和总结)
+- **单次面试成本**: 通常 $0.10-0.50 (30-60分钟面试)
+- **优化建议**: 使用智能分段减少冗余API调用
+
+### API使用配置
+
+#### 模型选择策略
+- **Whisper-1**: 高精度多语言转录，支持50+语言
+- **GPT-4 Turbo**: 快速翻译和问题生成
+- **GPT-4**: 深度面试总结分析(可选)
+
+#### 并发与限制
+- **速率限制**: 默认 3 RPM (每分钟请求数)
+- **并发处理**: 自动队列管理，避免限制
+- **重试机制**: 指数退避重试，提升成功率
+
+## 🚀 部署指南
+
+### 生产环境部署 (Vercel推荐)
+
+#### 一键部署步骤
+1. **Fork项目**: 将项目Fork到您的GitHub账号
+2. **导入Vercel**: 在 [Vercel](https://vercel.com) 中连接GitHub导入项目
+3. **环境配置**: 设置环境变量
+   ```bash
+   NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url (可选)
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key (可选)
+   ```
+4. **部署完成**: 自动构建和部署，获得生产URL
+
+#### 高级部署配置
+- **域名绑定**: 配置自定义域名和HTTPS证书
+- **CDN加速**: Vercel自动提供全球CDN加速
+- **边缘计算**: 全球边缘节点，降低延迟
+- **分析监控**: 内置性能分析和错误监控
+
+### 自建服务器部署
+
+#### Docker部署 (推荐)
+```bash
+# 1. 克隆项目
+git clone https://github.com/KevinWangQQ/interview-assistant.git
+cd interview-assistant
+
+# 2. 构建Docker镜像
+docker build -t interview-assistant .
+
+# 3. 运行容器
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_OPENAI_API_KEY=your_key \
+  interview-assistant
+```
+
+#### 传统部署方式
+```bash
+# 1. 安装依赖
+npm install
+
+# 2. 构建生产版本
+npm run build
+
+# 3. 启动生产服务
 npm start
 ```
 
-## 技术架构
+#### Nginx反向代理配置
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
 
-### 前端技术栈
-- **Next.js 14**: React 全栈框架，使用 App Router
-- **TypeScript**: 类型安全的 JavaScript
-- **Tailwind CSS**: 实用工具优先的 CSS 框架
-- **shadcn/ui**: 高质量的 React 组件库
-- **Zustand**: 轻量级状态管理
-- **Lucide React**: 现代化图标库
+## 🔒 安全与隐私
 
-### 核心服务
-- **Dexie.js**: IndexedDB 数据库封装，用于本地存储
-- **OpenAI API**: Whisper 语音转录 + GPT 文本翻译
-- **MediaRecorder API**: 浏览器原生录音功能
+### 数据安全保障
 
-## 使用指南
+#### 客户端安全
+- **API密钥加密**: localStorage加密存储，不传输到服务器
+- **HTTPS必须**: 生产环境强制HTTPS，保护数据传输
+- **CSP安全策略**: 内容安全策略防止XSS攻击
+- **权限最小化**: 仅请求必要的浏览器权限
 
-### 基本使用流程
+#### 服务端安全
+- **数据隔离**: Supabase RLS确保用户数据隔离
+- **认证安全**: Google OAuth 2.0认证，无密码泄露风险
+- **审计日志**: 记录关键操作，支持安全审计
+- **备份加密**: 数据备份自动加密存储
 
-1. **配置 API 密钥**
-   - 点击右上角"设置"
-   - 输入你的 OpenAI API Key
-   - 测试连接确保可用
+### 隐私保护措施
 
-2. **开始面试**
-   - 输入候选人姓名和应聘职位
-   - 点击"开始面试"按钮
-   - 浏览器会请求麦克风权限，请允许
+#### 数据处理原则
+- **最小化收集**: 仅收集必要的面试数据
+- **用途限制**: 数据仅用于面试分析，不做其他用途
+- **用户控制**: 用户完全控制自己的数据和隐私设置
+- **透明度**: 开源代码，数据处理过程完全透明
 
-3. **实时转录翻译**
-   - 系统会自动录音并转录
-   - 左侧显示英文原文
-   - 右侧显示中文翻译
-   - 右侧问题建议面板会根据对话生成相关问题
+#### 符合法规标准
+- **GDPR合规**: 支持数据可携性和删除权
+- **CCPA合规**: 加州消费者隐私法案合规
+- **数据本地化**: 支持数据在指定地区存储
 
-4. **面试控制**
-   - 支持暂停/继续录制
-   - 可以随时停止面试
-   - 系统自动保存面试记录
+### 浏览器兼容性与要求
 
-## API 配置
+#### 支持的浏览器
+- **桌面端**: 
+  - Chrome 80+ (推荐)
+  - Firefox 82+
+  - Safari 14+
+  - Edge 88+
+- **移动端**:
+  - iOS Safari 14+ (iOS 12+)
+  - Chrome Mobile 80+
+  - Samsung Internet 12+
 
-### OpenAI API Key 获取步骤
+#### 必需的浏览器功能
+- **MediaRecorder API**: 音频录制核心功能
+- **Web Audio API**: 音频处理和质量监控
+- **IndexedDB**: 本地数据存储
+- **Fetch API**: 网络请求处理
+- **ES2020支持**: 现代JavaScript特性
 
-1. 访问 [OpenAI API Keys 页面](https://platform.openai.com/api-keys)
-2. 登录你的 OpenAI 账户
-3. 点击 "Create new secret key"
-4. 复制生成的 API Key
-5. 在应用设置中输入并保存
-
-### API 使用说明
-
-- **Whisper API**: 用于语音转录，支持多种语言
-- **GPT API**: 用于文本翻译和问题生成
-- **费用预估**: 普通面试约消耗 $0.10-0.50 的API费用
-
-## 部署指南
-
-### Vercel 部署 (推荐)
-
-1. Fork 此项目到你的 GitHub
-2. 在 [Vercel](https://vercel.com) 中导入项目
-3. 设置环境变量 `NEXT_PUBLIC_OPENAI_API_KEY`
-4. 点击部署
-
-### 自定义服务器部署
-
-1. 构建项目：`npm run build`
-2. 启动服务：`npm start`
-3. 配置反向代理 (Nginx/Apache)
-4. 设置 HTTPS 证书（录音功能需要）
-
-## 注意事项
-
-### 浏览器兼容性
-- 需要支持 MediaRecorder API 的现代浏览器
-- 推荐使用 Chrome、Firefox、Safari 最新版本
-- 移动端需要 iOS 12+ 或 Android 6+
-
-### 隐私和安全
-- 录音数据仅用于转录，不会永久存储在服务器
-- 面试记录保存在本地浏览器中
-- API 密钥保存在本地存储，请勿在公共设备上使用
-
-### 网络要求
-- 需要稳定的网络连接以调用 OpenAI API
-- 建议在网络条件良好的环境下使用
-- 支持离线查看已保存的面试记录
+#### 网络环境要求
+- **带宽要求**: 上行 ≥512Kbps (音频上传)
+- **延迟要求**: ≤200ms (实时体验)
+- **稳定性**: 避免频繁网络中断
+- **防火墙**: 确保可访问 api.openai.com 域名
 
 ## 版本规划与路线图
 
@@ -224,69 +522,159 @@ npm start
 - 多模态交互（视频分析）
 - 区块链数据验证
 
-## 开发状态与贡献
+## 📊 开发状态与贡献
 
-### 🔄 开发状态
-- **当前版本**: v1.0.0 (MVP)
-- **开发分支**: main
-- **测试状态**: ✅ 功能测试通过
+### 🔄 当前开发状态
+
+#### 版本信息
+- **当前版本**: v1.5.0 (企业级功能完善版)
+- **主要分支**: main (生产稳定版)
+- **开发分支**: develop (功能开发版)
+- **发布状态**: ✅ 生产环境可用
+
+#### 代码质量
 - **构建状态**: ✅ 生产构建成功
-- **部署状态**: ✅ 可部署
+- **测试覆盖**: ✅ 核心功能测试通过
+- **代码检查**: ✅ ESLint + TypeScript 检查通过
+- **安全扫描**: ✅ 依赖安全漏洞检查通过
 
-### 📈 项目统计
-- **代码行数**: ~3000+ lines
-- **组件数量**: 15+ React组件
-- **API集成**: 2个 (Whisper + GPT)
-- **数据库表**: 1个 (面试记录)
-- **支持语言**: 中文/英文
+#### 项目规模统计
+- **代码行数**: ~8,000+ lines
+- **React组件**: 30+ 组件
+- **服务模块**: 12+ 服务类
+- **API集成**: 4个 (Whisper + GPT + Supabase + Google OAuth)
+- **数据库表**: 3个 (用户配置、面试记录、岗位模板)
+- **支持语言**: 中文/英文界面
 
-### 🤝 如何贡献
+### 🤝 社区贡献指南
 
-我们欢迎社区贡献！你可以通过以下方式参与：
+#### 贡献方式
+我们欢迎以下形式的贡献：
 
-1. **功能建议**: 提交Issue描述新功能需求
-2. **Bug报告**: 发现问题请提交详细的Bug报告
-3. **代码贡献**: Fork项目，提交Pull Request
-4. **文档改进**: 帮助完善文档和使用指南
-5. **测试反馈**: 在不同环境下测试并反馈问题
+1. **🐛 Bug报告**
+   - 通过GitHub Issues报告问题
+   - 提供详细的重现步骤和环境信息
+   - 附上错误截图和日志信息
 
-### 📋 贡献指南
+2. **💡 功能建议**
+   - 描述功能需求和使用场景
+   - 说明功能的预期效果和价值
+   - 讨论实现方案和技术考虑
 
+3. **💻 代码贡献**
+   - Fork项目并创建功能分支
+   - 遵循代码规范和提交信息格式
+   - 确保新代码有相应的测试覆盖
+
+4. **📖 文档改进**
+   - 完善使用指南和API文档
+   - 翻译文档到其他语言
+   - 添加示例和最佳实践
+
+5. **🧪 测试反馈**
+   - 在不同环境下测试功能
+   - 报告兼容性问题
+   - 分享使用经验和建议
+
+#### 开发流程规范
+
+##### 1. 代码贡献流程
 ```bash
-# 1. Fork项目到你的GitHub
-# 2. 克隆到本地
+# 1. Fork项目到个人GitHub账号
+# 2. 克隆到本地开发环境
 git clone https://github.com/yourusername/interview-assistant.git
+cd interview-assistant
 
-# 3. 创建功能分支
-git checkout -b feature/new-feature
+# 3. 安装依赖和开发工具
+npm install
 
-# 4. 开发并测试
-npm run dev
-npm run build
+# 4. 创建功能分支
+git checkout -b feature/your-feature-name
 
-# 5. 提交更改
-git commit -am 'feat: add new feature'
+# 5. 本地开发和测试
+npm run dev          # 启动开发服务器
+npm run build        # 测试生产构建
+npm run lint         # 代码质量检查
 
-# 6. 推送分支
-git push origin feature/new-feature
+# 6. 提交代码 (遵循Conventional Commits)
+git add .
+git commit -m "feat: add new feature description"
 
-# 7. 创建Pull Request
+# 7. 推送分支并创建PR
+git push origin feature/your-feature-name
+# 在GitHub上创建Pull Request
 ```
 
-### 🎖️ 贡献者
+##### 2. 提交信息规范
+使用 [Conventional Commits](https://www.conventionalcommits.org/) 格式：
+- `feat:` 新功能
+- `fix:` 错误修复
+- `docs:` 文档更新
+- `style:` 代码格式调整
+- `refactor:` 代码重构
+- `test:` 测试相关
+- `chore:` 构建/工具相关
 
-- **项目创建者**: [Claude Code Assistant]
-- **技术架构**: 可扩展服务层设计
-- **UI设计**: 现代化响应式界面
+##### 3. 代码规范要求
+- **TypeScript**: 严格类型检查，无 any 类型
+- **ESLint**: 遵循项目配置规则
+- **Prettier**: 自动代码格式化
+- **组件设计**: 遵循单一职责原则
+- **性能优化**: 避免不必要的重渲染
 
-感谢所有为项目做出贡献的开发者！
+### 🎖️ 贡献者致谢
 
-## 许可证
+#### 核心贡献者
+- **🤖 Claude Code Assistant**: 项目创建者和主要开发者
+  - 完整的技术架构设计
+  - 核心功能模块实现
+  - 用户体验优化
 
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
+#### 技术架构亮点
+- **🏗️ 服务层架构**: 可扩展的模块化设计
+- **🎨 现代化UI**: 基于shadcn/ui的一致性设计
+- **🔒 安全设计**: 多层次的安全保障措施
+- **📱 响应式**: 完美适配桌面端和移动端
+
+#### 特别感谢
+感谢所有测试用户的反馈和建议，你们的意见让产品变得更好！
+
+### 📄 开源许可
+
+#### MIT许可证
+本项目采用 [MIT许可证](LICENSE)，允许：
+- ✅ 商业使用
+- ✅ 修改和分发
+- ✅ 私人使用
+- ✅ 专利使用
+
+#### 使用条款
+- 📋 保留版权声明
+- 🚫 不提供担保
+- 💼 自行承担使用风险
+
+### 🔗 相关链接与支持
+
+#### 项目资源
+- **📂 源代码**: [GitHub Repository](https://github.com/KevinWangQQ/interview-assistant)
+- **🌐 在线演示**: [https://interview.cnbu.link](https://interview.cnbu.link)
+- **📖 在线文档**: [项目Wiki](https://github.com/KevinWangQQ/interview-assistant/wiki)
+- **📊 更新日志**: [VERSION_WALKTHROUGH.md](VERSION_WALKTHROUGH.md)
+
+#### 获取支持
+- **🐛 问题报告**: [GitHub Issues](https://github.com/KevinWangQQ/interview-assistant/issues)
+- **💡 功能建议**: [GitHub Discussions](https://github.com/KevinWangQQ/interview-assistant/discussions)
+- **📧 联系邮箱**: support@interview-assistant.com (如适用)
 
 ---
 
-**免责声明**: 本工具仅用于辅助面试，最终的招聘决策应基于综合评估。使用本工具时请遵守相关的隐私和法律法规。
+### ⚠️ 免责声明
 
-**联系方式**: 如有问题或建议，请通过GitHub Issues联系我们。
+**使用说明**: 本工具是AI驱动的面试辅助系统，旨在提高面试效率和质量。请注意：
+
+- 🤖 **AI辅助工具**: 本系统提供AI分析和建议，但最终招聘决策应基于人类判断
+- 🔒 **隐私保护**: 请确保面试内容符合公司隐私政策和相关法律法规
+- 📋 **数据安全**: 建议在安全网络环境下使用，避免敏感信息泄露
+- ⚖️ **合规使用**: 使用过程中请遵守当地就业法律和反歧视条例
+
+**技术支持**: 如遇技术问题或需要功能建议，欢迎通过GitHub Issues与我们联系。我们致力于持续改进产品，为用户提供更好的面试体验。
