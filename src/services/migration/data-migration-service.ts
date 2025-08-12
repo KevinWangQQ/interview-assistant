@@ -1,7 +1,7 @@
 // 🚀 V2.0数据迁移服务 - localStorage到Supabase的智能迁移
 
 import { EnhancedInterviewSession } from '@/types/enhanced-interview';
-import { SupabaseStorageService } from '@/services/storage/supabase-storage';
+import { SupabaseUserProfileService } from '@/services/storage';
 import { EnhancedInterviewStorageService } from '@/services/storage/enhanced-interview-storage';
 
 interface MigrationProgress {
@@ -37,7 +37,7 @@ interface MigrationOptions {
 }
 
 export class DataMigrationService {
-  private supabaseStorage: SupabaseStorageService;
+  private supabaseStorage: SupabaseUserProfileService;
   private localStorageService: EnhancedInterviewStorageService;
   private readonly LOCAL_STORAGE_KEYS = [
     'enhanced-interview-sessions',
@@ -47,7 +47,7 @@ export class DataMigrationService {
   ];
 
   constructor() {
-    this.supabaseStorage = new SupabaseStorageService();
+    this.supabaseStorage = new SupabaseUserProfileService();
     this.localStorageService = new EnhancedInterviewStorageService();
   }
 

@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { InterviewTextChunker, TextChunk } from './text-chunking';
 import { TranscriptionSegment } from '@/utils/smart-segmentation';
 import { PositionTemplate } from '@/services/interfaces';
-import { SupabaseUserProfileService } from '@/services/storage/supabase-storage';
+import { SupabaseUserProfileService } from '@/services/storage';
 
 interface EnhancedInterviewSummaryConfig {
   model: string;

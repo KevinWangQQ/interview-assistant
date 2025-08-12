@@ -552,7 +552,7 @@ export const useWAVStreamingStore = create<WAVStreamingStore>()(
           // 导入增强版总结服务和存储服务
           const { EnhancedGPT4SummaryService } = await import('@/services/interview-summary/enhanced-gpt4-summary-service');
           const { EnhancedInterviewStorageService } = await import('@/services/storage/enhanced-interview-storage');
-          const { SupabaseUserProfileService } = await import('@/services/storage/supabase-storage');
+          const { SupabaseUserProfileService } = await import('@/services/storage');
           
           const summaryService = new EnhancedGPT4SummaryService();
           const storageService = new EnhancedInterviewStorageService();

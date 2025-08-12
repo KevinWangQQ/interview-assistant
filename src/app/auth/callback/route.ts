@@ -1,8 +1,10 @@
 // 🔄 认证回调处理 - Google OAuth登录后的回调处理
+// 职责：仅处理OAuth认证流程，用户初始化交给专门的服务
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@/lib/supabase/client';
+import { UserProfileService } from '@/services/storage';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -15,6 +17,7 @@ export async function GET(request: NextRequest) {
     const supabase = createRouteHandlerClient(cookieStore);
     
     try {
+      // 1. 交换授权码为会话
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
       
       if (error) {
@@ -23,36 +26,15 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/auth/error?message=${encodeURIComponent(error.message)}`);
       }
       
+      // 2. 用户初始化（独立处理，不影响认证流程）
       if (data?.session?.user) {
         console.log('✅ 用户登录成功:', data.session.user.email);
         
-        // 简化用户profile创建逻辑，避免复杂的数据库操作
-        try {
-          // 使用upsert来处理用户profile，更安全
-          const { error: upsertError } = await supabase
-            .from('user_profiles')
-            .upsert({
-              user_id: data.session.user.id,
-              display_name: data.session.user.user_metadata?.full_name || data.session.user.email,
-              avatar_url: data.session.user.user_metadata?.avatar_url,
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'user_id'
-            });
-          
-          if (upsertError) {
-            console.error('用户profile upsert失败:', upsertError);
-            // 即使profile操作失败，也继续登录流程
-          } else {
-            console.log('✅ 用户profile已更新');
-          }
-        } catch (error) {
-          console.error('用户profile处理异常:', error);
-          // 捕获所有异常，确保不影响登录
-        }
+        // 使用专门的用户服务处理初始化
+        await handleUserInitialization(data.session.user, supabase);
       }
       
-      // 重定向到指定页面或首页
+      // 3. 重定向到目标页面
       const finalRedirectTo = redirectTo || '/';
       return NextResponse.redirect(`${origin}${finalRedirectTo}`);
       
@@ -64,4 +46,46 @@ export async function GET(request: NextRequest) {
 
   // 没有code参数，重定向到首页
   return NextResponse.redirect(`${origin}/`);
+}
+
+/**
+ * 用户初始化处理 - 独立的业务逻辑
+ * 职责：创建或更新用户Profile，设置默认配置
+ */
+async function handleUserInitialization(user: any, supabase: any): Promise<void> {
+  try {
+    // 创建用户Profile服务实例（临时方式，用于服务器端）
+    const profileService = new UserProfileService();
+    
+    // 尝试创建或更新用户Profile
+    const profileResult = await profileService.upsertProfile({
+      user_id: user.id,
+      display_name: user.user_metadata?.full_name || user.email,
+      avatar_url: user.user_metadata?.avatar_url,
+      settings: {
+        // 设置默认用户偏好
+        ui: {
+          theme: 'system',
+          language: 'zh-CN'
+        },
+        audio: {
+          quality: 'high',
+          enableSystemAudio: true
+        },
+        privacy: {
+          enableCloudSync: true
+        }
+      }
+    });
+
+    if (profileResult) {
+      console.log('✅ 用户初始化完成');
+    } else {
+      console.warn('⚠️ 用户Profile创建失败，但不影响登录');
+    }
+
+  } catch (error) {
+    // 用户初始化失败不应该影响登录流程
+    console.warn('⚠️ 用户初始化异常（不影响登录）:', error);
+  }
 }
