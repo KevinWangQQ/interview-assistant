@@ -53,11 +53,17 @@ export function EnhancedInterviewHistory({ className, onViewInterview }: Enhance
   const [showFilters, setShowFilters] = useState(false);
   const { user } = useAuth();
   
-  const { sessions, loadSessions, deleteSession, exportSession } = useInterviewHistoryStore();
+  const { sessions, loadSessions, deleteSession, exportSession, setUserId } = useInterviewHistoryStore();
 
+  // 设置用户ID并加载会话
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+    if (user?.id) {
+      setUserId(user.id);
+      loadSessions();
+    } else {
+      setUserId(null);
+    }
+  }, [user?.id, setUserId, loadSessions]);
 
   // 过滤和排序逻辑
   const processedSessions = useMemo(() => {

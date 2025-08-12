@@ -7,6 +7,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { createClientComponentClient } from '@/lib/supabase/client';
 // import { DataMigrationService } from '@/services/migration/data-migration-service'; // 暂时禁用
 import { getOAuthCallbackUrl, validateOAuthConfig } from '@/lib/oauth-config';
+import { createStorageServices } from '@/services/storage';
 
 interface MigrationStatus {
   needsMigration: boolean;
@@ -48,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [migrationChecked, setMigrationChecked] = useState(false);
   
   // const migrationService = new DataMigrationService(); // 暂时禁用
-  
+  const storageServices = createStorageServices();
   const supabase = createClientComponentClient();
 
   useEffect(() => {
@@ -58,6 +59,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
+        
+        // 设置存储服务的用户ID（初始会话）
+        const userId = initialSession?.user?.id || null;
+        storageServices.setUserId(userId);
+        console.log('🔗 初始会话存储服务用户ID已设置:', userId);
       } catch (error) {
         console.error('获取初始会话失败:', error);
       } finally {
@@ -75,6 +81,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // 设置存储服务的用户ID（关键修复）
+        const userId = session?.user?.id || null;
+        storageServices.setUserId(userId);
+        console.log('🔗 存储服务用户ID已设置:', userId);
 
         // 当用户首次登录时，创建用户配置文件并检查数据迁移
         if (event === 'SIGNED_IN' && session?.user) {

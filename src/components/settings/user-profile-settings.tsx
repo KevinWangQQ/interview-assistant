@@ -53,6 +53,14 @@ export function UserProfileSettings({ className }: UserProfileSettingsProps) {
   const userProfileService = new UserProfileService();
   const settingsService = new SettingsService();
 
+  // 设置用户ID
+  useEffect(() => {
+    if (user?.id) {
+      userProfileService.setUserId(user.id);
+      settingsService.setUserId(user.id);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (user) {
       loadProfile();

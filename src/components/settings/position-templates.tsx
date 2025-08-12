@@ -34,12 +34,14 @@ import {
 } from 'lucide-react';
 import { PositionTemplateService } from '@/services/storage';
 import { PositionTemplate } from '@/services/interfaces';
+import { useAuth } from '@/contexts/auth-context';
 
 interface PositionTemplatesProps {
   className?: string;
 }
 
 export function PositionTemplates({ className }: PositionTemplatesProps) {
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<PositionTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,13 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   const positionTemplateService = new PositionTemplateService();
+  
+  // 设置用户ID
+  useEffect(() => {
+    if (user?.id) {
+      positionTemplateService.setUserId(user.id);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     loadTemplates();

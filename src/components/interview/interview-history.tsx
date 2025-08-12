@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useInterviewHistoryStore } from '@/store/interview-history-store';
 import { EnhancedInterviewSession } from '@/types/enhanced-interview';
+import { useAuth } from '@/contexts/auth-context';
 
 interface InterviewHistoryProps {
   className?: string;
@@ -25,14 +26,21 @@ interface InterviewHistoryProps {
 }
 
 export function InterviewHistory({ className, onViewInterview }: InterviewHistoryProps) {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInterview, setSelectedInterview] = useState<EnhancedInterviewSession | null>(null);
   
-  const { sessions, loadSessions, deleteSession, exportSession } = useInterviewHistoryStore();
+  const { sessions, loadSessions, deleteSession, exportSession, setUserId } = useInterviewHistoryStore();
 
+  // 设置用户ID并加载会话
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+    if (user?.id) {
+      setUserId(user.id);
+      loadSessions();
+    } else {
+      setUserId(null);
+    }
+  }, [user?.id, setUserId, loadSessions]);
 
   const filteredSessions = sessions
     .filter(session =>
