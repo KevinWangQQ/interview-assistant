@@ -4,7 +4,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@/lib/supabase/client';
-import { UserProfileService } from '@/services/storage';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -49,39 +48,48 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * 用户初始化处理 - 独立的业务逻辑
- * 职责：创建或更新用户Profile，设置默认配置
+ * 用户初始化处理 - 简化的直接数据库操作版本
+ * 职责：仅创建基本用户Profile，避免复杂服务依赖
  */
 async function handleUserInitialization(user: any, supabase: any): Promise<void> {
   try {
-    // 创建用户Profile服务实例（临时方式，用于服务器端）
-    const profileService = new UserProfileService();
+    console.log('🔄 开始用户初始化...');
     
-    // 尝试创建或更新用户Profile
-    const profileResult = await profileService.upsertProfile({
-      user_id: user.id,
-      display_name: user.user_metadata?.full_name || user.email,
-      avatar_url: user.user_metadata?.avatar_url,
-      settings: {
-        // 设置默认用户偏好
-        ui: {
-          theme: 'system',
-          language: 'zh-CN'
-        },
-        audio: {
-          quality: 'high',
-          enableSystemAudio: true
-        },
-        privacy: {
-          enableCloudSync: true
-        }
-      }
-    });
+    // 直接使用Supabase客户端，避免服务层的复杂依赖
+    const { data: existingProfile } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
 
-    if (profileResult) {
-      console.log('✅ 用户初始化完成');
+    if (!existingProfile) {
+      // 只创建基本的用户Profile，不涉及其他表
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: user.id,
+          display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '用户',
+          avatar_url: user.user_metadata?.avatar_url || null,
+          settings: {
+            ui: { theme: 'system', language: 'zh-CN' },
+            audio: { quality: 'high', enableSystemAudio: true },
+            privacy: { enableCloudSync: true }
+          },
+          preferences: {
+            autoGenerateSummary: true,
+            defaultPrivacyLevel: 'internal'
+          }
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ 用户Profile创建失败:', error);
+      } else {
+        console.log('✅ 用户Profile创建成功:', data.id);
+      }
     } else {
-      console.warn('⚠️ 用户Profile创建失败，但不影响登录');
+      console.log('✅ 用户Profile已存在，跳过创建');
     }
 
   } catch (error) {
