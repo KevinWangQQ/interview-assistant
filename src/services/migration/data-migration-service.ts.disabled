@@ -61,9 +61,9 @@ export class DataMigrationService {
     lastMigrationTime?: Date;
   }> {
     try {
-      // 检查用户是否已登录
-      const isLoggedIn = await this.supabaseStorage.isReady();
-      if (!isLoggedIn) {
+      // 检查用户Profile是否存在
+      const profile = await this.supabaseStorage.getProfile();
+      if (!profile) {
         return {
           needsMigration: false,
           localSessionsCount: 0,
@@ -74,8 +74,13 @@ export class DataMigrationService {
       // 获取本地数据统计
       const localSessions = this.localStorageService.getAllSessions();
       
-      // 获取云端数据统计
-      const cloudSessions = await this.supabaseStorage.listSessions();
+      // 迁移服务暂时不可用，需要重构以适配新的服务架构
+      console.warn('数据迁移服务暂时不可用');
+      return {
+        needsMigration: false,
+        localSessionsCount: 0,
+        cloudSessionsCount: 0
+      };
       
       // 检查上次迁移时间
       const lastMigrationTime = await this.getLastMigrationTime();

@@ -17,7 +17,7 @@ import { UserProfileService } from './user-profile.service';
 import { InterviewSessionService } from './interview-session.service';
 import { PositionTemplateService } from './position-template.service';
 import { SettingsService } from './settings.service';
-import { IUserProfileService, IInterviewStorageService } from '../interfaces';
+import { IUserProfileService, IEnhancedStorageService } from '../interfaces';
 
 /**
  * 统一存储服务 - 兼容性包装器
@@ -28,7 +28,7 @@ import { IUserProfileService, IInterviewStorageService } from '../interfaces';
  * - PositionTemplateService: 岗位模板管理
  * - SettingsService: 用户设置管理
  */
-export class SupabaseUserProfileService implements IUserProfileService, IInterviewStorageService {
+export class SupabaseUserProfileService implements IUserProfileService {
   private userProfileService: UserProfileService;
   private interviewSessionService: InterviewSessionService;
   private positionTemplateService: PositionTemplateService;
@@ -108,8 +108,14 @@ export class SupabaseUserProfileService implements IUserProfileService, IIntervi
     return this.positionTemplateService.updatePositionTemplate(id, updates);
   }
 
-  async deletePositionTemplate(id: string) {
-    return this.positionTemplateService.deletePositionTemplate(id);
+  async deletePositionTemplate(id: string): Promise<boolean> {
+    try {
+      await this.positionTemplateService.deletePositionTemplate(id);
+      return true;
+    } catch (error) {
+      console.error('删除岗位模板失败:', error);
+      return false;
+    }
   }
 
   // 设置相关方法（委托给 SettingsService）

@@ -23,7 +23,7 @@ import {
   Upload
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { SupabaseUserProfileService, SupabaseStorageService } from '@/services/storage/supabase-storage';
+import { UserProfileService, SettingsService } from '@/services/storage';
 import { UserProfile } from '@/services/interfaces';
 
 interface UserProfileSettingsProps {
@@ -50,8 +50,8 @@ export function UserProfileSettings({ className }: UserProfileSettingsProps) {
     }
   });
 
-  const userProfileService = new SupabaseUserProfileService();
-  const storageService = new SupabaseStorageService();
+  const userProfileService = new UserProfileService();
+  const settingsService = new SettingsService();
 
   useEffect(() => {
     if (user) {
@@ -115,18 +115,10 @@ export function UserProfileSettings({ className }: UserProfileSettingsProps) {
     setSuccess(null);
 
     try {
-      const result = await storageService.migrateFromLocalStorage();
-      
-      if (result.migrated > 0) {
-        setSuccess(`数据迁移完成！成功迁移 ${result.migrated} 个面试记录`);
-      } else {
-        setError('未找到需要迁移的本地数据');
-      }
-
-      if (result.failed > 0) {
-        console.error('部分数据迁移失败:', result.errors);
-        setError(`迁移完成，但有 ${result.failed} 个记录迁移失败`);
-      }
+      // 数据迁移功能暂时不可用，需要专门的迁移服务
+      console.warn('数据迁移功能暂时不可用');
+      setError('数据迁移功能暂时不可用，请联系管理员');
+      return;
 
     } catch (error) {
       console.error('数据迁移失败:', error);

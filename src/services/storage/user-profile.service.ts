@@ -4,7 +4,7 @@ import { createClientComponentClient } from '@/lib/supabase/client';
 import { IUserProfileService, UserProfile } from '../interfaces';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export class UserProfileService implements IUserProfileService {
+export class UserProfileService {
   private supabase: SupabaseClient;
   private userId: string | null = null;
 

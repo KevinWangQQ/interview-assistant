@@ -9,20 +9,29 @@ import { EnhancedInterviewMain } from '@/components/interview/enhanced-interview
 import { LoginPage } from '@/components/auth/login-page';
 import { UserProfile } from '@/components/auth/user-profile';
 import { MigrationReminder } from '@/components/migration/migration-reminder';
-import { DataMigrationWizard } from '@/components/migration/data-migration-wizard';
+// import { DataMigrationWizard } from '@/components/migration/data-migration-wizard'; // 暂时禁用
 import { TranslationFocusedInterview } from '@/components/interview/translation-focused-interview';
 import { useInterviewHistoryStore } from '@/store/interview-history-store';
 import { EnhancedInterviewSession } from '@/types/enhanced-interview';
 import { useAuth } from '@/contexts/auth-context';
 import { Mic, History, Settings, Loader2, Languages } from 'lucide-react';
-import { MigrationResult } from '@/services/migration/data-migration-service';
+// import { MigrationResult } from '@/services/migration/data-migration-service'; // 暂时禁用
+
+// 临时类型定义
+interface MigrationResult {
+  success: boolean;
+  migrated: number;
+  migratedSessions: number;
+  failed: number;
+  errors?: string[];
+}
 
 type ViewType = 'interview' | 'translation' | 'history' | 'settings' | 'interview-detail';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>('interview');
   const [selectedInterview, setSelectedInterview] = useState<EnhancedInterviewSession | null>(null);
-  const [showMigrationWizard, setShowMigrationWizard] = useState(false);
+  const [showMigrationWizard, setShowMigrationWizard] = useState(false); // 暂时禁用迁移
   const { loadSessions } = useInterviewHistoryStore();
   const { user, loading, migrationStatus, migrationChecked } = useAuth();
 
@@ -125,10 +134,12 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
+          {/* 数据迁移向导暂时禁用
           <DataMigrationWizard
             onComplete={handleMigrationComplete}
             onCancel={handleMigrationCancel}
           />
+          */}
         </div>
       </div>
     );

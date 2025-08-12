@@ -32,7 +32,7 @@ export class PositionTemplateService implements IPositionTemplateService {
     {
       name: '软件工程师（通用）',
       description: '通用软件开发岗位的面试模板',
-      requirements: ['编程基础', '算法思维', '系统设计', '项目经验'],
+      requirements: '编程基础、算法思维、系统设计、项目经验',
       evaluation_criteria: {
         technical_skills: 40,
         problem_solving: 30,
@@ -45,7 +45,7 @@ export class PositionTemplateService implements IPositionTemplateService {
     {
       name: '产品经理（通用）',
       description: '通用产品管理岗位的面试模板',
-      requirements: ['产品思维', '数据分析', '用户体验', '项目管理'],
+      requirements: '产品思维、数据分析、用户体验、项目管理',
       evaluation_criteria: {
         product_sense: 35,
         analytical_skills: 25,

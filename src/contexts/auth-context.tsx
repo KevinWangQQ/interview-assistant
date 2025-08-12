@@ -5,7 +5,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { createClientComponentClient } from '@/lib/supabase/client';
-import { DataMigrationService } from '@/services/migration/data-migration-service';
+// import { DataMigrationService } from '@/services/migration/data-migration-service'; // 暂时禁用
 import { getOAuthCallbackUrl, validateOAuthConfig } from '@/lib/oauth-config';
 
 interface MigrationStatus {
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [migrationStatus, setMigrationStatus] = useState<MigrationStatus | null>(null);
   const [migrationChecked, setMigrationChecked] = useState(false);
   
-  const migrationService = new DataMigrationService();
+  // const migrationService = new DataMigrationService(); // 暂时禁用
   
   const supabase = createClientComponentClient();
 
@@ -105,7 +105,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       console.log('🔍 检查数据迁移状态...');
-      const status = await migrationService.needsMigration();
+      // 迁移服务暂时禁用
+      const status = {
+        needsMigration: false,
+        localSessionsCount: 0,
+        cloudSessionsCount: 0
+      };
       setMigrationStatus(status);
       
       if (status.needsMigration) {

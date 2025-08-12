@@ -32,7 +32,7 @@ import {
   Check,
   Loader2
 } from 'lucide-react';
-import { SupabaseUserProfileService } from '@/services/storage/supabase-storage';
+import { PositionTemplateService } from '@/services/storage';
 import { PositionTemplate } from '@/services/interfaces';
 
 interface PositionTemplatesProps {
@@ -47,7 +47,7 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
-  const userProfileService = new SupabaseUserProfileService();
+  const positionTemplateService = new PositionTemplateService();
 
   useEffect(() => {
     loadTemplates();
@@ -57,7 +57,7 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
     try {
       setLoading(true);
       setError(null);
-      const loadedTemplates = await userProfileService.getPositionTemplates();
+      const loadedTemplates = await positionTemplateService.getPositionTemplates();
       setTemplates(loadedTemplates);
     } catch (error) {
       console.error('加载岗位模板失败:', error);
@@ -69,7 +69,7 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
 
   const handleCreateTemplate = async (templateData: Omit<PositionTemplate, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     try {
-      const newTemplate = await userProfileService.createPositionTemplate({
+      const newTemplate = await positionTemplateService.createPositionTemplate({
         ...templateData,
         user_id: '' // Will be set by the service based on current user
       });
@@ -83,7 +83,7 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
 
   const handleUpdateTemplate = async (id: string, updates: Partial<PositionTemplate>) => {
     try {
-      await userProfileService.updatePositionTemplate(id, updates);
+      await positionTemplateService.updatePositionTemplate(id, updates);
       setTemplates(prev => 
         prev.map(template => 
           template.id === id ? { ...template, ...updates } : template
@@ -103,7 +103,8 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
     }
 
     try {
-      const success = await userProfileService.deletePositionTemplate(id);
+      await positionTemplateService.deletePositionTemplate(id);
+      const success = true;
       if (success) {
         setTemplates(prev => prev.filter(template => template.id !== id));
       } else {
@@ -121,11 +122,11 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
       await Promise.all(
         templates
           .filter(t => t.is_default && t.id !== id)
-          .map(t => userProfileService.updatePositionTemplate(t.id, { is_default: false }))
+          .map(t => positionTemplateService.updatePositionTemplate(t.id, { is_default: false }))
       );
 
       // 设置当前模板为默认
-      await userProfileService.updatePositionTemplate(id, { is_default: true });
+      await positionTemplateService.updatePositionTemplate(id, { is_default: true });
       
       // 更新本地状态
       setTemplates(prev => 

@@ -1,10 +1,10 @@
 // 🎤 面试会话管理服务 - 专注于面试会话和转录片段的管理
 
 import { createClientComponentClient } from '@/lib/supabase/client';
-import { IInterviewStorageService, InterviewSession, TranscriptionSegment } from '../interfaces';
+import { InterviewSession, TranscriptionSegment } from '@/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export class InterviewSessionService implements IInterviewStorageService {
+export class InterviewSessionService {
   private supabase: SupabaseClient;
   private userId: string | null = null;
 
@@ -86,7 +86,6 @@ export class InterviewSessionService implements IInterviewStorageService {
         .from('interview_sessions')
         .update({
           ...updates,
-          recording_session: updates.recordingSession,
           updated_at: new Date().toISOString()
         })
         .eq('id', sessionId)
@@ -184,10 +183,10 @@ export class InterviewSessionService implements IInterviewStorageService {
         session_id: sessionId,
         original_text: segment.originalText,
         translated_text: segment.translatedText,
-        start_time: segment.startTime,
-        end_time: segment.endTime,
-        speaker_info: segment.speakerInfo || {},
-        metadata: segment.metadata || {}
+        start_time: (segment as any).startTime || segment.timestamp,
+        end_time: (segment as any).endTime || segment.timestamp,
+        speaker_info: (segment as any).speakerInfo || {},
+        metadata: (segment as any).metadata || {}
       }));
 
       const { error } = await this.supabase
@@ -223,12 +222,15 @@ export class InterviewSessionService implements IInterviewStorageService {
         session_id: segment.session_id,
         originalText: segment.original_text,
         translatedText: segment.translated_text,
+        timestamp: new Date(segment.start_time).getTime(),
+        speaker: segment.speaker_info?.name || '',
+        confidence: segment.metadata?.confidence || 0.95,
         startTime: segment.start_time,
         endTime: segment.end_time,
         speakerInfo: segment.speaker_info || {},
         metadata: segment.metadata || {},
         created_at: new Date(segment.created_at)
-      }));
+      })) as TranscriptionSegment[];
 
     } catch (error) {
       console.error('❌ 获取转录片段失败:', error);
