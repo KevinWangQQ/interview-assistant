@@ -272,3 +272,5 @@ Based on recent commits, the following issues have been resolved:
 3. **ESLint Warnings**: Resolved prefer-const and unused variable warnings
 4. **TypeScript Errors**: Fixed cache management type issues
 5. **Runtime Exceptions**: Fixed syntax errors in hallucination detection functions
+- 每次提交在version_walkthrough.md中新建一个版本走查板块。用于填写走查记录。
+- 走查内容我会更新在走查板块对应的版本下。

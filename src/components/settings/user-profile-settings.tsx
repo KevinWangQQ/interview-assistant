@@ -53,24 +53,49 @@ export function UserProfileSettings({ className }: UserProfileSettingsProps) {
   const userProfileService = new UserProfileService();
   const settingsService = new SettingsService();
 
-  // 设置用户ID
+  // 设置用户ID并加载配置
   useEffect(() => {
     if (user?.id) {
       userProfileService.setUserId(user.id);
       settingsService.setUserId(user.id);
+      loadProfile();
+    } else {
+      setProfile(null);
+      setLoading(false);
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
-  }, [user]);
-
   const loadProfile = async () => {
+    if (!user?.id) {
+      console.log('用户未登录，跳过加载用户资料');
+      return;
+    }
+    
     try {
       setLoading(true);
-      const userProfile = await userProfileService.getProfile();
+      setError(null);
+      console.log('开始加载用户资料，用户ID:', user.id);
+      
+      let userProfile = await userProfileService.getProfile();
+      console.log('获取到的用户资料:', userProfile);
+      
+      // 如果用户资料不存在，创建默认资料
+      if (!userProfile) {
+        console.log('用户资料不存在，创建默认资料...');
+        userProfile = await userProfileService.upsertProfile({
+          user_id: user.id,
+          display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '用户',
+          avatar_url: user.user_metadata?.avatar_url || null,
+          settings: {
+            language: 'zh',
+            theme: 'system',
+            notifications: true,
+            autoGenerateSummary: true,
+            defaultPrivacyLevel: 'internal'
+          }
+        });
+        console.log('创建的用户资料:', userProfile);
+      }
       
       if (userProfile) {
         setProfile(userProfile);
@@ -81,6 +106,7 @@ export function UserProfileSettings({ className }: UserProfileSettingsProps) {
             ...userProfile.settings
           }
         });
+        console.log('用户资料加载完成');
       }
     } catch (error) {
       console.error('加载用户配置失败:', error);

@@ -51,22 +51,33 @@ export function PositionTemplates({ className }: PositionTemplatesProps) {
   
   const positionTemplateService = new PositionTemplateService();
   
-  // 设置用户ID
+  // 设置用户ID并加载模板
   useEffect(() => {
     if (user?.id) {
       positionTemplateService.setUserId(user.id);
+      loadTemplates();
+    } else {
+      setTemplates([]);
+      setLoading(false);
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
   const loadTemplates = async () => {
+    if (!user?.id) {
+      console.log('用户未登录，跳过加载岗位模板');
+      setTemplates([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
+      console.log('开始加载岗位模板，用户ID:', user.id);
+      
       const loadedTemplates = await positionTemplateService.getPositionTemplates();
+      console.log('加载到的岗位模板:', loadedTemplates);
+      
       setTemplates(loadedTemplates);
     } catch (error) {
       console.error('加载岗位模板失败:', error);
