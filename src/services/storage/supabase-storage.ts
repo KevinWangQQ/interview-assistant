@@ -776,8 +776,33 @@ export class SupabaseUserProfileService implements IUserProfileService {
     }
   }
 
-  // 岗位模板管理
+  // 岗位模板管理 - 暂时全部禁用避免数据库错误
   async getPositionTemplates(): Promise<PositionTemplate[]> {
+    return [];
+  }
+
+  async getPositionTemplate(id: string): Promise<PositionTemplate | null> {
+    return null;
+  }
+
+  async createPositionTemplate(template: any): Promise<any> {
+    throw new Error('岗位模板功能暂时禁用');
+  }
+
+  async updatePositionTemplate(id: string, updates: any): Promise<void> {
+    throw new Error('岗位模板功能暂时禁用');
+  }
+
+  async deletePositionTemplate(id: string): Promise<void> {
+    throw new Error('岗位模板功能暂时禁用');
+  }
+
+  // 原始方法暂时注释
+  async _getPositionTemplates_disabled(): Promise<PositionTemplate[]> {
+    console.log('⚠️ 岗位模板功能暂时禁用');
+    return [];
+    
+    /* 暂时注释掉，等position_templates表创建完成后再启用
     if (!this.userId) return [];
 
     try {
@@ -803,6 +828,7 @@ export class SupabaseUserProfileService implements IUserProfileService {
       console.error('❌ 获取岗位模板失败:', error);
       return [];
     }
+    */
   }
 
   async getPositionTemplate(id: string): Promise<PositionTemplate | null> {

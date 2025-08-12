@@ -26,32 +26,29 @@ export async function GET(request: NextRequest) {
       if (data?.session?.user) {
         console.log('✅ 用户登录成功:', data.session.user.email);
         
-        // 检查用户profile是否存在，不存在则创建
-        const { data: profile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', data.session.user.id)
-          .single();
-        
-        // 如果用户profile不存在（无论是null还是查询错误），都创建新的profile
-        if (!profile) {
-          console.log('创建新用户profile...');
-          const { error: insertError } = await supabase
+        // 简化用户profile创建逻辑，避免复杂的数据库操作
+        try {
+          // 使用upsert来处理用户profile，更安全
+          const { error: upsertError } = await supabase
             .from('user_profiles')
-            .insert({
+            .upsert({
               user_id: data.session.user.id,
               display_name: data.session.user.user_metadata?.full_name || data.session.user.email,
-              avatar_url: data.session.user.user_metadata?.avatar_url
+              avatar_url: data.session.user.user_metadata?.avatar_url,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id'
             });
           
-          if (insertError) {
-            console.error('创建用户profile失败:', insertError);
-            // 不要因为profile创建失败就阻止用户登录
+          if (upsertError) {
+            console.error('用户profile upsert失败:', upsertError);
+            // 即使profile操作失败，也继续登录流程
           } else {
-            console.log('✅ 用户profile创建成功');
+            console.log('✅ 用户profile已更新');
           }
-        } else {
-          console.log('✅ 用户profile已存在');
+        } catch (error) {
+          console.error('用户profile处理异常:', error);
+          // 捕获所有异常，确保不影响登录
         }
       }
       
