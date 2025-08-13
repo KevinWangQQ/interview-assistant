@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { EnhancedInterviewHistory } from '@/components/interview/enhanced-interview-history';
+import { UnifiedHistory } from '@/components/history/unified-history';
 import { InterviewSettings } from '@/components/interview/interview-settings';
 import { InterviewDetailView } from '@/components/interview/interview-detail-view';
 import { StreamingErrorBoundary } from '@/components/streaming/streaming-error-boundary';
@@ -10,11 +10,16 @@ import { LoginPage } from '@/components/auth/login-page';
 import { UserProfile } from '@/components/auth/user-profile';
 import { MigrationReminder } from '@/components/migration/migration-reminder';
 // import { DataMigrationWizard } from '@/components/migration/data-migration-wizard'; // 暂时禁用
-import { TranslationFocusedInterview } from '@/components/interview/translation-focused-interview';
+import { MeetingMinutesMain } from '@/components/meeting/meeting-minutes-main';
 import { useInterviewHistoryStore } from '@/store/interview-history-store';
 import { EnhancedInterviewSession } from '@/types/enhanced-interview';
+import { MeetingSession } from '@/types/meeting';
 import { useAuth } from '@/contexts/auth-context';
-import { Mic, History, Settings, Loader2, Languages } from 'lucide-react';
+import { Mic, History, Settings, Loader2, FileText } from 'lucide-react';
+// 开发环境下导入数据隔离测试工具
+if (process.env.NODE_ENV === 'development') {
+  import('@/utils/data-isolation-test');
+}
 // import { MigrationResult } from '@/services/migration/data-migration-service'; // 暂时禁用
 
 // 临时类型定义
@@ -26,11 +31,12 @@ interface MigrationResult {
   errors?: string[];
 }
 
-type ViewType = 'interview' | 'translation' | 'history' | 'settings' | 'interview-detail';
+type ViewType = 'interview' | 'meeting' | 'history' | 'settings' | 'interview-detail';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>('interview');
   const [selectedInterview, setSelectedInterview] = useState<EnhancedInterviewSession | null>(null);
+  const [selectedMeeting, setSelectedMeeting] = useState<MeetingSession | null>(null);
   const [showMigrationWizard, setShowMigrationWizard] = useState(false); // 暂时禁用迁移
   const { loadSessions } = useInterviewHistoryStore();
   const { user, loading, migrationStatus, migrationChecked } = useAuth();
@@ -71,6 +77,13 @@ export default function Home() {
     setCurrentView('interview-detail');
   };
 
+  const handleViewMeeting = (meeting: MeetingSession) => {
+    // 可以后续扩展会议详情查看页面
+    console.log('查看会议:', meeting.meetingTitle);
+    // 临时使用alert显示会议信息
+    alert(`会议: ${meeting.meetingTitle}\n时间: ${meeting.createdAt.toLocaleString()}\n组织者: ${meeting.organizer}`);
+  };
+
   const handleBackToHistory = () => {
     setSelectedInterview(null);
     setCurrentView('history');
@@ -100,14 +113,15 @@ export default function Home() {
       case 'interview':
         return <EnhancedInterviewMain />;
       
-      case 'translation':
-        return <TranslationFocusedInterview />;
+      case 'meeting':
+        return <MeetingMinutesMain />;
       
       case 'history':
         return (
-          <EnhancedInterviewHistory 
+          <UnifiedHistory 
             key="history-view" 
-            onViewInterview={handleViewInterview} 
+            onViewInterview={handleViewInterview}
+            onViewMeeting={handleViewMeeting}
           />
         );
       
@@ -118,7 +132,10 @@ export default function Home() {
             onBack={handleBackToHistory}
           />
         ) : (
-          <EnhancedInterviewHistory onViewInterview={handleViewInterview} />
+          <UnifiedHistory 
+            onViewInterview={handleViewInterview} 
+            onViewMeeting={handleViewMeeting}
+          />
         );
       
       case 'settings':
@@ -184,16 +201,16 @@ export default function Home() {
                   面试
                 </button>
                 <button
-                  onClick={() => setCurrentView('translation')}
+                  onClick={() => setCurrentView('meeting')}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    currentView === 'translation' 
+                    currentView === 'meeting' 
                       ? 'bg-primary text-primary-foreground' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                   }`}
-                  title="优化长时间翻译场景"
+                  title="会议录制和纪要生成"
                 >
-                  <Languages className="h-4 w-4 mr-1 inline-block" />
-                  长翻译
+                  <FileText className="h-4 w-4 mr-1 inline-block" />
+                  会议纪要
                 </button>
                 <button
                   onClick={() => setCurrentView('history')}
