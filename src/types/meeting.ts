@@ -201,7 +201,7 @@ export interface MeetingFilter {
 }
 
 export interface MeetingExportConfig {
-  format: 'docx' | 'pdf' | 'html' | 'markdown' | 'txt';
+  format: 'docx' | 'pdf' | 'html' | 'markdown' | 'txt' | 'json';
   includeTranscript: boolean;
   includeMinutes: boolean;
   includeActionItems: boolean;

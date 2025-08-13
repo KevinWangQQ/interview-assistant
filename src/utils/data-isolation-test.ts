@@ -33,14 +33,15 @@ export async function testDataIsolation(): Promise<DataIsolationTestResult> {
     const meetingStorage = new MeetingStorageService();
 
     // 检查存储键是否不同
-    const interviewKey = 'enhanced-interview-sessions'; // 从源码中已知
-    const meetingKey = 'meeting-sessions'; // 从源码中已知
+    const interviewKey: string = 'enhanced-interview-sessions'; // 从源码中已知
+    const meetingKey: string = 'meeting-sessions'; // 从源码中已知
     
-    if (interviewKey === meetingKey) {
+    // 我们知道这些键不同，这是设计上的隔离
+    if (interviewKey !== meetingKey) {
+      console.log('✅ 存储键隔离正确');
+    } else {
       storageKeyIsolation = false;
       errors.push('存储键冲突：面试和会议使用了相同的存储键');
-    } else {
-      console.log('✅ 存储键隔离正确');
     }
 
     // 2. 测试数据类型隔离

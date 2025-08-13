@@ -452,8 +452,8 @@ export const useMeetingStore = create<MeetingStore>()(
           }
           
           // 动态导入GPT服务
-          const { GPT4SummaryService } = await import('@/services/interview-summary/gpt4-summary-service');
-          const summaryService = new GPT4SummaryService();
+          const { GPT4InterviewSummaryService } = await import('@/services/interview-summary/gpt4-summary-service');
+          const summaryService = new GPT4InterviewSummaryService();
           
           // 准备转录文本
           const newTranscript = unprocessedSegments
