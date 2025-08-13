@@ -63,7 +63,7 @@ export function UnifiedHistory({
   
   const { 
     sessions: interviews, 
-    loading: interviewsLoading, 
+    isLoading: interviewsLoading, 
     loadSessions: loadInterviews 
   } = useInterviewHistoryStore();
   
